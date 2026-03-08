@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <model version="NetLogo 7.0.3" snapToGrid="true">
-  <code>to go
+  <code>__includes ["BlankGrid.nls" "Bacteria.nls"]
+
+to go
 end
 
 to blah
