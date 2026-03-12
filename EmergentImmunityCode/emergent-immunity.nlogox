@@ -15,7 +15,16 @@ to test
   print p1
   print p2
   print word "recomb = " recombinationFunction p1 p2
+  
+  print word "mutation = " mutationFunction p1 0.05
 end
+
+to clear-terminal
+  print "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n" ; print 20 empty lines
+end
+
+
+
 
 to go
 end
@@ -48,30 +57,7 @@ to-report randomGenomeFunction
   report seq
 end
 
-; ;; then, afterwards the immune cells will take the top percent of cells as parents and combine them together 
-; to-report recombinationFunction [parent1Genome parent2Genome recombinationPercent]
-;   ;; How to use: make a list of size n that holds the top n immune cels (make different lists for macrophages and neutrophils)
-;   ;;             Loop through the list and call this function (maybe only use the top 4-6 cells and create ~50 new cells from this)
-;   ;;             Maybe set the recombinationPercent to be 0.60 (IT'S NOT USED ANYMORE THO)
-;   ;; goal: Take the two parent genomes, split p1 to be [k:recombPercent] and p2 to be [recombPercent:], the combine both strings together to get the new list
-  
-;   let newGenome ""
-;   ;; convert the string into a list
-;   let p1list string-to-list parent1Genome
-;   let p2list string-to-list parent2Genome
-;   ;; find the point where we split the list (use the commented out portion if you want to hardcode the cutoff)
-;   ;;   let cutoff floor (recombinationPercent * length p1list)
-;   ;; making the cutoff random
-;   let cutoff random (length p1list)
-;   ;; split the list
-;   let halfFromP1 sublist p1list 0 cutoff
-;   let halfFromP2 sublist p2list cutoff length p2list
-;   ;; combine them and make it a string again
-;   set newGenome reduce word (sentence halfFromP1 halfFromP2)
-;   report newGenome
-; end
-
-
+;; then, afterwards the immune cells will take the top percent of cells as parents and combine them together 
 to-report recombinationFunction [p1 p2]
   ;; How to use: make a list of size n that holds the top n immune cels (make different lists for macrophages and neutrophils)
   ;;             Loop through the list and call this function (maybe only use the top 4-6 cells and create ~50 new cells from this)
@@ -86,35 +72,20 @@ to-report recombinationFunction [p1 p2]
         substring p2 cutoff length p2
 end
 
-; ;; the bacteria will just mutate the best ones a certain percent
-; to-report mutationFunction [cellGenome mutationRate]
-;   ;; How to use: make a list of size n that holds the top n bacteria. 
-;   ;;             Loop through the list and call this function (maybe only use the top 3 cells and create ~50 new cells from this)
-;   ;;             Maybe set the mutationRate to be 0.05
-;   ;; goal: take the original genome and walk through the list and mutate the base at a probability of 0.05 (this is variable)
-;   let newGenome ""
-  
-;   foreach string-to-list cellGenome [
-;     base ->
-;     ifelse random-float 1 < mutationRate
-;     [
-;       set newGenome word newGenome one-of remove base bases
-;     ]
-;     [
-;       set newGenome word newGenome base
-;     ]
-;   ]
-;   report newGenome
-; end
 
+;; the bacteria will just mutate the best ones a certain percent
 to-report mutationFunction [cellGenome mutationRate]
+  ;; How to use: make a list of size n that holds the top n bacteria. 
+  ;;             Loop through the list and call this function (maybe only use the top 3 cells and create ~50 new cells from this)
+  ;;             Maybe set the mutationRate to be 0.05
+  ;; goal: take the original genome and walk through the list and mutate the base at a probability of 0.05 (this is variable)
   let newGenome ""
   let genomeLength length cellGenome
   
   ;; loop through each character
   foreach n-values genomeLength [ i -> i ] [
     i ->
-    let base substring cellGenome i (i + 1)
+    let base substring cellGenome i (i + 1) ;; get one character (between i and i+1). Substring allows us to do that because cellGenome is a string
     ifelse random-float 1 < mutationRate [
       ;; mutate base
       set newGenome word newGenome one-of remove base bases
@@ -123,7 +94,6 @@ to-report mutationFunction [cellGenome mutationRate]
       set newGenome word newGenome base
     ]
   ]
-  
   report newGenome
 end
 
@@ -134,6 +104,7 @@ end
     <button x="185" y="190" height="40" disableUntilTicks="false" forever="false" kind="Observer" width="70" display="khadeeja"></button>
     <button x="205" y="45" height="40" disableUntilTicks="false" forever="false" kind="Observer" width="55" display="Start">setup</button>
     <button x="210" y="105" height="40" disableUntilTicks="false" forever="false" kind="Observer" width="55" display="Tests">test</button>
+    <button x="200" y="270" height="40" disableUntilTicks="false" forever="false" kind="Observer" width="100" display="Clear Terminal">clear-terminal</button>
   </widgets>
   <info>## WHAT IS IT?
 
