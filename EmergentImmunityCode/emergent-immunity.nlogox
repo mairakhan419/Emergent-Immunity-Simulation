@@ -2,9 +2,16 @@
 <model version="NetLogo 7.0.3" snapToGrid="true">
   <code>__includes ["HealthyCells.nls" "Bacteria.nls" "Macrophage.nls" "GenomeFunction.nls"]
 
-to go
+to setup
+  clear-all
+  setup-healthy-cells
+  reset-ticks
 end
 
+to go
+  update-healthy-cells
+  tick
+end
 
 
 
