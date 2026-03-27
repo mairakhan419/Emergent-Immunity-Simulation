@@ -27,6 +27,30 @@ end
 
 
 
+to setup
+  clear-all
+  setup-healthy-cells
+  reset-ticks
+end
+
+to test
+  let p1 randomGenomeFunction
+  let p2 randomGenomeFunction
+  
+  print p1
+  print p2
+  print word "recomb = " recombinationFunction p1 p2
+  
+  print word "mutation = " mutationFunction p1 0.05
+end
+
+to clear-terminal
+  print "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n" ; print 20 empty lines
+end
+
+
+
+
 to go
 end
 
