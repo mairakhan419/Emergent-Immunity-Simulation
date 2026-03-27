@@ -1,6 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <model version="NetLogo 7.0.3" snapToGrid="true">
-  <code>__includes ["HealthyCells.nls" "Bacteria.nls" "Macrophage.nls" "GenomeFunction.nls"]
+  <code><![CDATA[__includes ["HealthyCells.nls" "Bacteria.nls" "Macrophage.nls" "GenomeFunction.nls"]
+globals [bases]
+
+to setup
+  clear-all
+  set bases ["A" "G" "T" "C"]
+  reset-ticks
+end
+
+to test
+  let p1 randomGenomeFunction
+  let p2 randomGenomeFunction
+  
+  print p1
+  print p2
+  print word "recomb = " recombinationFunction p1 p2
+  
+  print word "mutation = " mutationFunction p1 0.05
+end
+
+to clear-terminal
+  print "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n" ; print 20 empty lines
+end
+
+
+
 
 to setup
   clear-all
