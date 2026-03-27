@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <model version="NetLogo 7.0.3" snapToGrid="true">
   <code>__includes ["HealthyCells.nls" "Bacteria.nls" "Macrophage.nls" "GenomeFunction.nls"]
+globals [bases]
 
 to setup
   clear-all
+  set bases ["A" "G" "T" "C"]
   setup-healthy-cells
   reset-ticks
 end
