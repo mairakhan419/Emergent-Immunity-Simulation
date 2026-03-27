@@ -1,18 +1,6 @@
 ;; create general function for creating unique genomes 
 ;;     have one for bacteria 
 ;;     have one for the immune cells (since their genome has meaning)
-globals [bases]
-
-to setup
-  clear-all
-  set bases ["A" "G" "T" "C"]
-  reset-ticks
-end
-
-
-;; create general function for creating unique genomes 
-;;     have one for bacteria 
-;;     have one for the immune cells (since their genome has meaning)
 
 ;; initally all cells will have a random distribution of AGTCs 
 to-report randomGenomeFunction 
