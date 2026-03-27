@@ -11,11 +11,7 @@ end
 to go
   update-healthy-cells
   tick
-end
-
-
-
-</code>
+end</code>
   <widgets>
     <view x="265" wrappingAllowedX="true" y="20" frameRate="30.0" minPycor="-16" height="783" showTickCounter="true" patchSize="17.73" fontSize="10" wrappingAllowedY="true" width="641" tickCounterLabel="ticks" maxPycor="16" updateMode="0" maxPxcor="13" minPxcor="-13"></view>
     <note x="910" y="0" backgroundDark="0" fontSize="11" width="250" markdown="true" height="41" textColorDark="-15302303" textColorLight="-15302303" backgroundLight="0">---------------- ANALYSIS --------------</note>
@@ -86,9 +82,9 @@ end
     <chooser x="10" y="5" height="60" variable="Simulation-Model" current="0" width="250" display="Simulation-Model">
       <choice type="string" value="Emergent Immunity"></choice>
     </chooser>
-    <button x="10" y="70" height="40" disableUntilTicks="false" forever="false" kind="Observer" width="75" display="Setup"></button>
+    <button x="10" y="70" height="40" disableUntilTicks="false" forever="false" kind="Observer" width="75" display="Setup">setup</button>
     <button x="90" y="70" height="40" disableUntilTicks="false" forever="false" kind="Observer" width="85" display="Go Once"></button>
-    <button x="180" y="70" height="40" disableUntilTicks="false" forever="true" kind="Observer" width="80" display="Go "></button>
+    <button x="180" y="70" height="40" disableUntilTicks="false" forever="true" kind="Observer" width="80" display="Go ">go</button>
     <note x="5" y="100" backgroundDark="0" fontSize="11" width="250" markdown="true" height="40" textColorDark="-15302303" textColorLight="-15302303" backgroundLight="0">---------------- POPULATION ----------------</note>
     <slider x="5" step="1" y="135" max="100" width="250" display="Initial-Healthy-Cells-Count" height="50" min="0" direction="Horizontal" default="38.0" variable="Initial-Healthy-Cells-Count"></slider>
     <slider x="5" step="1" y="730" max="100" width="250" display="Mutation-Rate%" height="50" min="0" direction="Horizontal" default="9.0" variable="Mutation-Rate%"></slider>
