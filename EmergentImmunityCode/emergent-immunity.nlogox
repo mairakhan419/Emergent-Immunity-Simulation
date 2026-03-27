@@ -27,82 +27,93 @@ end
 
 
 
+to setup
+  clear-all
+  setup-healthy-cells
+  reset-ticks
+end
+
 to go
-end
-
-to blah
-end
-
-
-
-
-
-;; ------------------------------------ AREA OF CODE FOR GENOME FUNCTIONS ----------------------------------------------- ;;
-
-; ;; create general function for creating unique genomes 
-; ;;     have one for bacteria 
-; ;;     have one for the immune cells (since their genome has meaning)
-
-; ;; initally all cells will have a random distribution of AGTCs 
-; to-report randomGenomeFunction 
-;   ;; How to use: let cellGenome randomGenomeFunction
-;   ;; goal: Generate a random 16-character sequence of 'AGTC'
-;   let seq ""
-;   repeat 16 [
-;     set seq word seq one-of bases
-;   ]
-;   report seq
-; end
-
-; ;; then, afterwards the immune cells will take the top percent of cells as parents and combine them together 
-; to-report recombinationFunction [p1 p2]
-;   ;; How to use: make a list of size n that holds the top n immune cels (make different lists for macrophages and neutrophils)
-;   ;;             Loop through the list and call this function (maybe only use the top 4-6 cells and create ~50 new cells from this)
-;   ;;             Probably a good idea to also run the mutation function once as well on each result from this (to introduce some randomness and prevent a finding a local extremum instead of global)
-;   ;; goal: Take the two parent genomes, split p1 to be [k:recombPercent] and p2 to be [recombPercent:], the combine both strings together to get the new list
-  
-;   ;; making the cutoff random
-;   let cutoff random (length p1)
-
-;   ;; split the list, combine them, and make it a string again
-;   report word
-;         substring p1 0 cutoff
-;         substring p2 cutoff length p2
-; end
-
-
-; ;; the bacteria will just mutate the best ones a certain percent
-; to-report mutationFunction [cellGenome mutationRate]
-;   ;; How to use: make a list of size n that holds the top n bacteria. 
-;   ;;             Loop through the list and call this function (maybe only use the top 3 cells and create ~50 new cells from this)
-;   ;;             Maybe set the mutationRate to be 0.05
-;   ;; goal: take the original genome and walk through the list and mutate the base at a probability of 0.05 (this is variable)
-;   let newGenome ""
-;   let genomeLength length cellGenome
-  
-;   ;; loop through each character
-;   foreach n-values genomeLength [ i -> i ] [
-;     i ->
-;     let base substring cellGenome i (i + 1) ;; get one character (between i and i+1). Substring allows us to do that because cellGenome is a string
-;     ifelse random-float 1 < mutationRate [
-;       ;; mutate base
-;       set newGenome word newGenome one-of remove base bases
-;     ][
-;       ;; keep original
-;       set newGenome word newGenome base
-;     ]
-;   ]
-;   report newGenome
-; end
-
-;; ------------------------------------ END OF CODE FOR GENOME FUNCTIONS ----------------------------------------------- ;;]]></code>
+  update-healthy-cells
+  tick
+end</code>
   <widgets>
-    <view x="368" wrappingAllowedX="true" y="10" frameRate="30.0" minPycor="-16" height="434" showTickCounter="true" patchSize="13.0" fontSize="10" wrappingAllowedY="true" width="434" tickCounterLabel="ticks" maxPycor="16" updateMode="0" maxPxcor="16" minPxcor="-16"></view>
-    <button x="80" y="95" height="40" disableUntilTicks="false" forever="false" kind="Observer" width="55" display="goooo"></button>
-    <button x="185" y="190" height="40" disableUntilTicks="false" forever="false" kind="Observer" width="70" display="khadeeja"></button>
-    <button x="205" y="45" height="40" disableUntilTicks="false" forever="false" kind="Observer" width="55" display="Start">setup</button>
-    <button x="210" y="105" height="40" disableUntilTicks="false" forever="false" kind="Observer" width="55" display="Tests">test</button>
-    <button x="200" y="270" height="40" disableUntilTicks="false" forever="false" kind="Observer" width="100" display="Clear Terminal">clear-terminal</button>
+    <view x="265" wrappingAllowedX="true" y="20" frameRate="30.0" minPycor="-16" height="783" showTickCounter="true" patchSize="17.73" fontSize="10" wrappingAllowedY="true" width="641" tickCounterLabel="ticks" maxPycor="16" updateMode="0" maxPxcor="13" minPxcor="-13"></view>
+    <note x="910" y="0" backgroundDark="0" fontSize="11" width="250" markdown="true" height="41" textColorDark="-15302303" textColorLight="-15302303" backgroundLight="0">---------------- ANALYSIS --------------</note>
+    <monitor x="1080" precision="17" y="45" height="60" fontSize="10" display="Top 2 Macrophage Genome" width="160" sizeVersion="0">ticks</monitor>
+    <monitor x="915" precision="17" y="110" height="60" fontSize="10" display="Top 1 Neutrophil Genome " width="160" sizeVersion="0">ticks</monitor>
+    <monitor x="1080" precision="17" y="110" height="60" fontSize="10" display="Top 2 Neutrophil Genome " width="160" sizeVersion="0">ticks</monitor>
+    <plot x="915" autoPlotX="true" yMax="10.0" autoPlotY="true" y="250" xMin="0.0" height="160" legend="false" xMax="10.0" yMin="0.0" display="Immune Cell Activity" width="225" sizeVersion="0">
+      <setup></setup>
+      <update></update>
+      <pen interval="1.0" mode="0" display="default" color="-16777216" legend="true">
+        <setup></setup>
+        <update>plot count turtles</update>
+      </pen>
+      <pen interval="1.0" mode="0" display="pen-1" color="-7500403" legend="true">
+        <setup></setup>
+        <update></update>
+      </pen>
+    </plot>
+    <plot x="915" autoPlotX="true" yMax="10.0" autoPlotY="true" y="420" xMin="0.0" height="160" legend="false" xMax="10.0" yMin="0.0" display="Genome Fitness (avg)" width="225" sizeVersion="0">
+      <setup></setup>
+      <update></update>
+      <pen interval="1.0" mode="0" display="default" color="-16777216" legend="true">
+        <setup></setup>
+        <update>plot count turtles</update>
+      </pen>
+      <pen interval="1.0" mode="0" display="pen-1" color="-7500403" legend="true">
+        <setup></setup>
+        <update></update>
+      </pen>
+    </plot>
+    <monitor x="915" precision="17" y="45" height="60" fontSize="10" display="Top 1 Macrophage Genome" width="160" sizeVersion="0">ticks</monitor>
+    <note x="900" y="565" backgroundDark="0" fontSize="11" width="250" markdown="true" height="41" textColorDark="-15302303" textColorLight="-15302303" backgroundLight="0">------------------- LIVE COUNTS -----------------</note>
+    <monitor x="915" precision="17" y="610" height="60" fontSize="10" display="healthy cells" width="110" sizeVersion="0">ticks</monitor>
+    <monitor x="1030" precision="17" y="610" height="60" fontSize="10" display="bacteria" width="110" sizeVersion="0">ticks</monitor>
+    <monitor x="915" precision="17" y="675" height="60" fontSize="10" display="macrophage cells" width="110" sizeVersion="0">ticks</monitor>
+    <monitor x="1030" precision="17" y="675" height="60" fontSize="10" display="neutrophils cells" width="110" sizeVersion="0">ticks</monitor>
+    <monitor x="915" precision="17" y="740" height="60" fontSize="10" display="dead cells" width="110" sizeVersion="0">ticks</monitor>
+    <monitor x="1030" precision="17" y="740" height="60" fontSize="10" display="generation" width="110" sizeVersion="0">ticks</monitor>
+    <monitor x="915" precision="17" y="180" height="60" fontSize="10" display="Top Bacteria Genome" width="160" sizeVersion="0">ticks</monitor>
+    <plot x="1150" autoPlotX="true" yMax="10.0" autoPlotY="true" y="320" xMin="0.0" height="160" legend="false" xMax="10.0" yMin="0.0" display="Cell Population Over Time" width="225" sizeVersion="0">
+      <setup></setup>
+      <update></update>
+      <pen interval="1.0" mode="0" display="default" color="-16777216" legend="true">
+        <setup></setup>
+        <update>plot count turtles</update>
+      </pen>
+      <pen interval="1.0" mode="0" display="pen-1" color="-7500403" legend="true">
+        <setup></setup>
+        <update></update>
+      </pen>
+      <pen interval="1.0" mode="0" display="pen-2" color="-2674135" legend="true">
+        <setup></setup>
+        <update></update>
+      </pen>
+    </plot>
+    <note x="5" y="695" backgroundDark="0" fontSize="11" width="250" markdown="true" height="41" textColorDark="-15302303" textColorLight="-15302303" backgroundLight="0">---------------- EVOLUTION ----------------</note>
+    <slider x="5" step="1" y="660" max="16" width="250" display="Neutrophil-Spawn-Rate" height="50" min="0" direction="Horizontal" default="10.0" variable="Neutrophil-Spawn-Rate"></slider>
+    <slider x="5" step="1" y="605" max="16" width="250" display="Neutrophil-Damage-Radius-T" height="50" min="0" direction="Horizontal" default="10.0" variable="Neutrophil-Damage-Radius-T"></slider>
+    <slider x="5" step="1" y="550" max="16" width="250" display="Neutrophil-Sensitivity-C" height="50" min="0" direction="Horizontal" default="10.0" variable="Neutrophil-Sensitivity-C"></slider>
+    <note x="5" y="515" backgroundDark="0" fontSize="11" width="250" markdown="true" height="41" textColorDark="-15302303" textColorLight="-15302303" backgroundLight="0">---------- NEUTROPHIL BEHAVIOUR ---------</note>
+    <slider x="5" step="1" y="480" max="100" width="250" display="Macrophage-Spawn-Rate" height="50" min="0" direction="Horizontal" default="50.0" variable="Macrophage-Spawn-Rate"></slider>
+    <slider x="5" step="1" y="425" max="16" width="250" display="Macrophage-Eat-Capacity-G" height="50" min="0" direction="Horizontal" default="10.0" variable="Macrophage-Eat-Capacity-G"></slider>
+    <slider x="5" step="1" y="370" max="16" width="250" display="Macrophage-Sensitivity-A" height="50" min="0" direction="Horizontal" default="13.0" variable="Macrophage-Sensitivity-A"></slider>
+    <note x="0" y="335" backgroundDark="0" fontSize="11" width="250" markdown="true" height="41" textColorDark="-15302303" textColorLight="-15302303" backgroundLight="0">---------- MACROPHAGE BEHAVIOUR ---------</note>
+    <slider x="5" step="1" y="300" max="100" width="250" display="Healthy-Cell-Regrowth-Rate" height="50" min="0" direction="Horizontal" default="15.0" variable="Healthy-Cell-Regrowth-Rate"></slider>
+    <slider x="5" step="1" y="245" max="100" width="250" display="Bacteria-Spread-Chance%" height="50" min="0" direction="Horizontal" default="27.0" variable="Bacteria-Spread-Chance%"></slider>
+    <slider x="5" step="1" y="190" max="100" width="250" display="Initial-Bacteria-Count" height="50" min="0" direction="Horizontal" default="38.0" variable="Initial-Bacteria-Count"></slider>
+    <chooser x="10" y="5" height="60" variable="Simulation-Model" current="0" width="250" display="Simulation-Model">
+      <choice type="string" value="Emergent Immunity"></choice>
+    </chooser>
+    <button x="10" y="70" height="40" disableUntilTicks="false" forever="false" kind="Observer" width="75" display="Setup">setup</button>
+    <button x="90" y="70" height="40" disableUntilTicks="false" forever="false" kind="Observer" width="85" display="Go Once"></button>
+    <button x="180" y="70" height="40" disableUntilTicks="false" forever="true" kind="Observer" width="80" display="Go ">go</button>
+    <note x="5" y="100" backgroundDark="0" fontSize="11" width="250" markdown="true" height="40" textColorDark="-15302303" textColorLight="-15302303" backgroundLight="0">---------------- POPULATION ----------------</note>
+    <slider x="5" step="1" y="135" max="100" width="250" display="Initial-Healthy-Cells-Count" height="50" min="0" direction="Horizontal" default="38.0" variable="Initial-Healthy-Cells-Count"></slider>
+    <slider x="5" step="1" y="730" max="100" width="250" display="Mutation-Rate%" height="50" min="0" direction="Horizontal" default="9.0" variable="Mutation-Rate%"></slider>
+    <slider x="5" step="1" y="785" max="100" width="250" display="lvenchisten-function" height="50" min="0" direction="Horizontal" default="46.0" variable="lvenchisten-function"></slider>
   </widgets>
   <info>## WHAT IS IT?
 
