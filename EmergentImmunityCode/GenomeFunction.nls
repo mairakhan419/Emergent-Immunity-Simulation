@@ -1,3 +1,5 @@
+<<<<<<< Updated upstream
+=======
 ;; create general function for creating unique genomes 
 ;;     have one for bacteria 
 ;;     have one for the immune cells (since their genome has meaning)
@@ -25,8 +27,8 @@ to-report recombinationFunction [p1 p2]
 
   ;; split the list, combine them, and make it a string again
   report word
-        substring p1 0 cutoff
-        substring p2 cutoff length p2
+        (substring p1 0 cutoff)
+        (substring p2 cutoff length p2)
 end
 
 
@@ -53,3 +55,101 @@ to-report mutationFunction [cellGenome mutationRate]
   ]
   report newGenome
 end
+
+;--------counts the minimum number of edits needed to turn one genome s1 to another genome s2-----------
+;a bacteria with a low distance to the actual body dna will look like a healthy cell and ay fool immune cells into 
+;not attacking it 
+to-report levenshtein-distance [s1 s2]
+  
+  if not is-string? s1 [report 0]
+  if not is-string? s2 [report 0]
+  if length s1 = 0 [report 0]
+  if length s2 = 0 [report 0]
+  
+  let len1 length s1
+  let len2 length s2
+  
+  ;convert both strings into lists of single characters 
+  let list1 n-values len1 [i -> substring s1 i (i + 1)]
+  let list2 n-values len2 [i -> substring s2 i (i + 1)]
+  
+  ;matrice: access element at row i, col j with: i * (len2 + 1) + j
+  let dp n-values ((len1 + 1) * (len2 + 1)) [0]
+  
+  ;first column: turning i characters into nothing costs i deletions 
+  let i 0
+  repeat len1 + 1 [
+    set dp replace-item (i * (len2 + 1)) dp i
+    set i (i + 1)
+  ]
+  
+  ;first row: building j characters from nothing costs j insertions 
+  let j 0
+  repeat len2 + 1 [
+    set dp replace-item j dp j
+    set j (j + 1)
+  ]
+  
+  ;fill the rest of the matrice row by row
+  set i 1
+  repeat len1 [
+    set j 1
+    repeat len2 [
+      ;cost 0 if characters match, cost 1 if they differ
+      let cost ifelse-value (item (i - 1) list1 = item (j - 1) list2) [0] [1]
+
+      let delete-op  item ((i - 1) * (len2 + 1) + j) dp + 1
+      let insert-op  item (i * (len2 + 1) + (j - 1)) dp + 1
+      let replace-op item ((i - 1) * (len2 + 1) + (j - 1)) dp + cost
+
+      set dp replace-item (i * (len2 + 1) + j) dp
+        (min (list delete-op insert-op replace-op))
+      set j j + 1
+    ]
+    set i (i + 1)
+  ]
+  
+  report item (len1 * (len2 + 1) + len2) dp 
+end
+
+
+;---------converts levenshtein distance into a 0-1 similarity score---------
+;1.0 = identical; 0.0 = completely different 
+;used by immune cells to decide whether a bacteria looks like a healthy cell 
+to-report genome-similarity [g1 g2]
+  if not is-string? g1 [ report 0 ]
+  if not is-string? g2 [ report 0 ]
+  if length g1 = 0 [ report 0 ]
+  if length g2 = 0 [ report 0 ]
+  let dist levenshtein-distance g1 g2
+  report 1 - (dist / max (list (length g1) (length g2)))
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+>>>>>>> Stashed changes

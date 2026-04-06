@@ -1,3 +1,5 @@
+<<<<<<< Updated upstream
+=======
 patches-own [
   healthy?
   pheromone      ; death signal released when eaten
@@ -12,8 +14,8 @@ to setup-healthy-cells
     set pcolor white
   ]
   
-  ; ~15% of patches are healthy cells 
-  ask n-of (count patches * 0.15) patches [
+  ;pick number of healthy cells based on the ui slider 
+  ask n-of (count patches * (initial-healthy-cells-count / 100)) patches [
     set healthy? true
     set pheromone 0
     set pcolor green
@@ -45,4 +47,14 @@ to update-healthy-cells
       ]
     ]
   ]
+  
+  ;regrow some empty patches into healthy cells each tick 
+  ask n-of min (list healthy-cell-regrowth-rate count patches with [not healthy?]) patches with [not healthy?] [
+    set healthy? true 
+    set eaten? false
+    set pheromone 0
+    set pcolor green
+  ]
+  
 end
+>>>>>>> Stashed changes
