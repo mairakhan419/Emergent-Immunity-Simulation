@@ -26,7 +26,8 @@ neutrophils-own [
 
 ; ---- runs once when the setup button is clicked in main ----
 to setup-neutrophils
-  create-neutrophils neutrophil-spawn-rate [
+  let room max (list 0 (max-neutrophils - count neutrophils))
+  create-neutrophils min (list neutrophil-spawn-rate room) [
     initialise-neutrophil
   ]
 end
@@ -37,7 +38,7 @@ to initialise-neutrophil
   ;remaining characters randomly filled with As and Gs
   let num-c neutrophil-sensitivity-c 
   let num-t neutrophil-damage-radius-t
-  let num-random 16 - num-c - num-t
+  let num-random max (list 0 (16 - num-c - num-t))
   
   ;build sections of the genome string and combine 
   let c-section ifelse-value (num-c > 0) [ reduce word n-values num-c [i -> "C"]] [ "" ]
@@ -76,28 +77,18 @@ end
 
 ; ---- function runs every tick to update all neutrophil behaviour ----
 to update-neutrophils
-  ;spawn new neutrophils 
-  create-neutrophils neutrophil-spawn-rate [
-    initialise-neutrophil
-  ]
-  
-  ;keep track of the top two performing neutrophils 
-  if any? neutrophils [
-    let best1 max-one-of neutrophils [bacteria-killed - (friendly-fire * 0.5)]
-    set last-fittest-neutrophil-genome-1 [genome] of best1
-    
-    ifelse count neutrophils > 1 [
-      let best2 max-one-of (neutrophils with [self != best1]) [bacteria-killed - (friendly-fire * 0.5)]
-      set last-fittest-neutrophil-genome-2 [genome] of best2
-    ] [
-      set last-fittest-neutrophil-genome-2 last-fittest-neutrophil-genome-1
+  let room max (list 0 (max-neutrophils - count neutrophils))
+  if room > 0 [
+    create-neutrophils min (list neutrophil-spawn-rate room) [
+      initialise-neutrophil
     ]
   ]
-  
-  ;tell every neutrophil to move, then attack 
+
+  let similarity-threshold (lvenchisten-function / 100)
+
   ask neutrophils [
     neutrophil-move
-    neutrophil-attack 
+    neutrophil-attack similarity-threshold
   ]
 end
 
@@ -124,19 +115,14 @@ end
   
 
 ; ---- function for firing spit attacks ----
-to neutrophil-attack
-  let all-in-range bacteria in-radius damage-radius
+to neutrophil-attack [similarity-threshold]
   ;only target bacteria whose genome looks foreign from healthy cells 
-  let targetable-bacteria all-in-range with [
-    genome-similarity genome body-genome < (lvenchisten-function / 100)
-  ]
-  
-  ;bacteria gets credit for fooling immune cell (fitness counter)
-  let fooling-bacteria all-in-range with [
-    genome-similarity genome body-genome >= (lvenchisten-function / 100)
-  ]
-  
-  ask fooling-bacteria [set times-fooled times-fooled + 1]
+  let all-in-range bacteria in-radius damage-radius
+  if any? all-in-range [
+    let targetable-bacteria all-in-range with [similarity-to-body < similarity-threshold]
+    let fooling-bacteria all-in-range with [similarity-to-body >= similarity-threshold]
+
+    ask fooling-bacteria [ set times-fooled times-fooled + 1 ]
   
   if any? targetable-bacteria [
     ;count how many bacteria going to get killed (fitness measure)
@@ -152,8 +138,8 @@ to neutrophil-attack
     
     ;count this as one spit 
     set spit-count spit-count + 1
+    ]
   ]
-  
   ;if this neutrophil used up its spit rounds, it dies off
   if spit-count >= max-spit [die]
 end 

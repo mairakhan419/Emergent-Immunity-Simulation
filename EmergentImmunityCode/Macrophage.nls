@@ -34,7 +34,8 @@ to setup-macrophages
   ask patches [ set macrophages-pheromone 0 ]   ;reset all p2 pheromone values on every patch to 0 (clean slate) 
   
   ;create the starting batch of macrophage depending on the slider option 
-  create-macrophages macrophage-spawn-rate [
+  let room max (list 0 (max-macrophages - count macrophages))
+  create-macrophages min (list macrophage-spawn-rate room) [
     initialise-macrophage  ;run setup block for each new macrophage 
   ]
 end
@@ -84,34 +85,27 @@ end
 ; ---- update function, and runs for every tick ----
 to update-macrophages
   ;spawn new macrophage every tick (mimics the production of new immune cell in the body)
-  create-macrophages macrophage-spawn-rate [
-    initialise-macrophage
+  let room max (list 0 (max-macrophages - count macrophages))
+  if room > 0 [
+    create-macrophages min (list macrophage-spawn-rate room) [
+      initialise-macrophage
+    ]
   ]
   
   ;spread the macrophages p2 pheromone signal to nearby patches 
-  diffuse macrophages-pheromone 0.25 
+  diffuse macrophages-pheromone 0.25
   
   ;make the macrophage pheromone fade little bit every tick 
   ask patches [ set macrophages-pheromone (macrophages-pheromone * 0.98) ]
   
-  ;keep track of the top two best performing macrophages  
-  if any? macrophages [
-    let best1 max-one-of macrophages [eat-count + (ticks-survived * 0.1)]
-    set last-fittest-macrophage-genome-1 [genome] of best1
-    
-    ifelse count macrophages > 1 [
-      let best2 max-one-of (macrophages with [self != best1]) [eat-count + (ticks-survived * 0.1)]
-      set last-fittest-macrophage-genome-2 [genome] of best2
-    ] [
-      set last-fittest-macrophage-genome-2 last-fittest-macrophage-genome-1
-    ]
-  ]
+  let similarity-threshold (lvenchisten-function / 100)
+
   
   ;tell every macrophage to move and eat 
   ask macrophages [
     set ticks-survived ticks-survived + 1
     macrophage-move
-    macrophage-eat
+    macrophage-eat similarity-threshold
   ]
   
 end
@@ -138,19 +132,21 @@ to macrophage-move
 end
 
 ; ---- this function handles eating bacteria  on the current patch ----
-to macrophage-eat 
+to macrophage-eat [similarity-threshold]
   ;check if any bacteria are sitting on the same patch as the macrophage 
   if any? bacteria-here [
     let target one-of bacteria-here
     
     ;if the bacteria genome looks to similar to the body genome, the macrophage mistakes it for
     ;healthy tissue and leaves it alone 
-    let similarity genome-similarity ([genome] of target) body-genome
+    let similarity [similarity-to-body] of target
     
-    ifelse similarity < (lvenchisten-function / 100 ) [
+    ifelse similarity < similarity-threshold [
       ask target [die]
       set eat-count eat-count + 1
-      set macrophages-pheromone macrophages-pheromone + 30
+      ask patch-here [
+        set macrophages-pheromone macrophages-pheromone + 30
+      ]
     ] [
       ;leave bacteria alone, looks too much like healthy cell
       ;this increments the bacterias fitness score 

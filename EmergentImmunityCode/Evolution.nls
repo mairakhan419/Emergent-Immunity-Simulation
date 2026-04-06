@@ -1,155 +1,130 @@
-;handles all evolution logic for the cells
+to seed-generation-records
+  if any? macrophages [
+    let best1 max-one-of macrophages [eat-count + (ticks-survived * 0.1)]
+    set last-fittest-macrophage-genome-1 [genome] of best1
 
-;evolution runs every 50 ticks (50 ticks = 1 generation) 
-;looks at which agents performed best and creates new generation by combining their genomes (recombination)
-;and adding small random changes (mutation) 
-
-;FITNESS SCORES:
-; macrophages: eat-count + (ticks-survived * 0.1)
-; neutrophils: bacteria-killed - (friendly-fire * 0.5)
-; bacteria: ticks-survived + (times-fooled * 2)
-
-
-; ------ MACROPHAGE EVOLUTION --------
-;selects the two best macrophages as parents and creates a new generation
-to evolve-macrophages 
-  ;--------CASE: no macrophages alive----------
-  ;all macrophages died this generation, so just recombine the two best genomes saved from the
-  ;last generation 
-  if not any? macrophages [
-    ;if no best genomes saved then default to random genome selection 
-    if last-fittest-macrophage-genome-1 = "" [
-      set last-fittest-macrophage-genome-1 randomGenomeFunction
+    let remaining-macrophages macrophages with [self != best1]
+    ifelse any? remaining-macrophages [
+      let best2 max-one-of remaining-macrophages [eat-count + (ticks-survived * 0.1)]
+      set last-fittest-macrophage-genome-2 [genome] of best2
+    ] [
+      set last-fittest-macrophage-genome-2 last-fittest-macrophage-genome-1
     ]
-    if last-fittest-macrophage-genome-2 = "" [
-      set last-fittest-macrophage-genome-2 randomGenomeFunction
-    ]
-    
-    ;recombine the two saved genomes and mutate the result 
-    let new-genome recombinationFunction last-fittest-macrophage-genome-1 last-fittest-macrophage-genome-2
-    set new-genome mutationFunction new-genome (mutation-rate% / 100)
-    
-    ;spawn new macrophages using the evolved genome 
-    create-macrophages macrophage-spawn-rate [
-      initialise-macrophage
-      set genome new-genome
-      ;recalcualet traits from the new genome 
-      set sensitivity length filter [c -> c = "A"] (n-values (length genome) [i -> substring genome i (i + 1)])
-      set max-eat length filter [c -> c ="G"] (n-values (length genome) [i -> substring genome i (i + 1)])
-    ]
-    stop  ;skip rest of function 
   ]
-  ;--------CASE: at least one macrophage survived (normal evolution)--------
-  ;pick the top two baed on fitness score 
-  let parent1 max-one-of macrophages [eat-count + (ticks-survived * 0.1)]
-  let remaining macrophages with [self != parent1]
-  
-  let parent2-genome ifelse-value any? remaining [
-    [genome] of max-one-of remaining [eat-count + (ticks-survived * 0.1)]
-  ] [
-    last-fittest-macrophage-genome-1
+
+  if any? neutrophils [
+    let best1 max-one-of neutrophils [bacteria-killed - (friendly-fire * 0.5)]
+    set last-fittest-neutrophil-genome-1 [genome] of best1
+
+    let remaining-neutrophils neutrophils with [self != best1]
+    ifelse any? remaining-neutrophils [
+      let best2 max-one-of remaining-neutrophils [bacteria-killed - (friendly-fire * 0.5)]
+      set last-fittest-neutrophil-genome-2 [genome] of best2
+    ] [
+      set last-fittest-neutrophil-genome-2 last-fittest-neutrophil-genome-1
+    ]
   ]
-  
-  let new-genome recombinationFunction ([genome] of parent1) parent2-genome 
+
+  if any? bacteria [
+    let fittest max-one-of bacteria [ticks-survived + (times-fooled * 2)]
+    set last-fittest-bacteria-genome [genome] of fittest
+  ]
+end
+
+
+
+;;MACROPHAGE EVOULTION 
+to evolve-macrophages
+  if any? macrophages [
+    let parent1 max-one-of macrophages [eat-count + (ticks-survived * 0.1)]
+    set last-fittest-macrophage-genome-1 [genome] of parent1
+
+    let remaining macrophages with [self != parent1]
+    ifelse any? remaining [
+      let parent2 max-one-of remaining [eat-count + (ticks-survived * 0.1)]
+      set last-fittest-macrophage-genome-2 [genome] of parent2
+    ] [
+      set last-fittest-macrophage-genome-2 last-fittest-macrophage-genome-1
+    ]
+  ]
+
+  if last-fittest-macrophage-genome-1 = "" [
+    set last-fittest-macrophage-genome-1 randomGenomeFunction
+  ]
+  if last-fittest-macrophage-genome-2 = "" [
+    set last-fittest-macrophage-genome-2 last-fittest-macrophage-genome-1
+  ]
+
+  let new-genome recombinationFunction last-fittest-macrophage-genome-1 last-fittest-macrophage-genome-2
   set new-genome mutationFunction new-genome (mutation-rate% / 100)
-  
-  ask macrophages [die]
-  create-macrophages macrophage-spawn-rate [
+
+  ask macrophages [ die ]
+  let room max (list 0 (max-macrophages - count macrophages))
+  create-macrophages min (list macrophage-spawn-rate room) [
     initialise-macrophage
     set genome new-genome
     set sensitivity length filter [c -> c = "A"] (n-values (length genome) [i -> substring genome i (i + 1)])
     set max-eat length filter [c -> c = "G"] (n-values (length genome) [i -> substring genome i (i + 1)])
   ]
-  
 end
 
 
-;---------NEUTROPHIL EVOLUTION-----------
-;fitness = bacteria killed minus penalty for friendly fire damage 
+;;NEUTROPHILS EVOULTION 
 to evolve-neutrophils
-  ;-----CASE: no neutrophils alive end of generation -------
-  if not any? neutrophils [
-    if last-fittest-neutrophil-genome-1 = "" [
-      set last-fittest-neutrophil-genome-1 randomGenomeFunction
-    ]
-    if last-fittest-neutrophil-genome-2 = "" [
-      set last-fittest-neutrophil-genome-2 randomGenomeFunction
-    ]
-    
-    let new-genome recombinationFunction last-fittest-neutrophil-genome-1 last-fittest-neutrophil-genome-2
-    set new-genome mutationFunction new-genome (mutation-rate% / 100)
-    
-    create-neutrophils neutrophil-spawn-rate [
-      initialise-neutrophil 
-      set genome new-genome 
-      set sensitivity length filter [c -> c = "C"] (n-values (length genome) [i -> substring genome i (i + 1)])
-      set damage-radius length filter [c -> c = "T"] (n-values (length genome) [i -> substring genome i (i + 1)])
-    ]
-    stop
-  ]
-  
-  ;pick top two by fitness score
-  ;a neutrophil that kills many bacteria but also wipes out healthy tissuesv scores lower than one that is more precise
-  let parent1 max-one-of neutrophils [bacteria-killed - (friendly-fire * 0.5)]
-  let remaining neutrophils with [self != parent1]
+  if any? neutrophils [
+    let parent1 max-one-of neutrophils [bacteria-killed - (friendly-fire * 0.5)]
+    set last-fittest-neutrophil-genome-1 [genome] of parent1
 
-  let parent2-genome ifelse-value any? remaining [
-    [genome] of max-one-of remaining [bacteria-killed - (friendly-fire * 0.5)]
-  ] [
-    last-fittest-neutrophil-genome-1
+    let remaining neutrophils with [self != parent1]
+    ifelse any? remaining [
+      let parent2 max-one-of remaining [bacteria-killed - (friendly-fire * 0.5)]
+      set last-fittest-neutrophil-genome-2 [genome] of parent2
+    ] [
+      set last-fittest-neutrophil-genome-2 last-fittest-neutrophil-genome-1
+    ]
   ]
-  
-  let new-genome recombinationFunction ([genome] of parent1) parent2-genome
+
+  if last-fittest-neutrophil-genome-1 = "" [
+    set last-fittest-neutrophil-genome-1 randomGenomeFunction
+  ]
+  if last-fittest-neutrophil-genome-2 = "" [
+    set last-fittest-neutrophil-genome-2 last-fittest-neutrophil-genome-1
+  ]
+
+  let new-genome recombinationFunction last-fittest-neutrophil-genome-1 last-fittest-neutrophil-genome-2
   set new-genome mutationFunction new-genome (mutation-rate% / 100)
 
   ask neutrophils [ die ]
-  create-neutrophils neutrophil-spawn-rate [
+  let room max (list 0 (max-neutrophils - count neutrophils))
+  create-neutrophils min (list neutrophil-spawn-rate room) [
     initialise-neutrophil
     set genome new-genome
-    set sensitivity   length filter [c -> c = "C"] (n-values (length genome) [i -> substring genome i (i + 1)])
+    set sensitivity length filter [c -> c = "C"] (n-values (length genome) [i -> substring genome i (i + 1)])
     set damage-radius length filter [c -> c = "T"] (n-values (length genome) [i -> substring genome i (i + 1)])
   ]
-  
 end
 
 
-
-;--------BACTERIA EVOLUTION--------
+;;BACTERIA EVOLUTION 
 to evolve-bacteria
-  ;------CASE: all bacteria died---------
-  if not any? bacteria [
-    if last-fittest-bacteria-genome = "" [
-      set last-fittest-bacteria-genome randomGenomeFunction
-    ]
-    
-    let new-genome mutationFunction last-fittest-bacteria-genome (mutation-rate% / 100)
-    
-    create-bacteria initial-bacteria-count [
-      set genome new-genome
-      set ticks-survived 0
-      set times-fooled 0 
-      set shape "circle"
-      set color red
-      set size 1
-      let start-patch one-of patches with [healthy?]
-      ifelse start-patch != nobody [
-        move-to start-patch 
-      ] [
-        move-to one-of patches
-      ]
-    ]
-    stop
+  if any? bacteria [
+    let fittest max-one-of bacteria [ticks-survived + (times-fooled * 2)]
+    set last-fittest-bacteria-genome [genome] of fittest
   ]
-  
-  ;pick the fittest bacteria for evolution 
-  let fittest max-one-of bacteria [ticks-survived + (times-fooled * 2)]
-  let new-genome mutationFunction ([genome] of fittest) (mutation-rate% / 100)
-  
-  ask bacteria [die]
-  create-bacteria initial-bacteria-count [
-    set genome new-genome 
+
+  if last-fittest-bacteria-genome = "" [
+    set last-fittest-bacteria-genome randomGenomeFunction
+  ]
+
+  let new-genome mutationFunction last-fittest-bacteria-genome (mutation-rate% / 100)
+  let new-similarity genome-similarity new-genome body-genome
+
+  ask bacteria [ die ]
+  create-bacteria min (list initial-bacteria-count max-bacteria) [
+    set genome new-genome
+    set similarity-to-body new-similarity
     set ticks-survived 0
-    set times-fooled 0 
+    set times-fooled 0
     set shape "circle"
     set color red
     set size 1
@@ -160,57 +135,28 @@ to evolve-bacteria
       move-to one-of patches
     ]
   ]
-  
 end
 
-
-;GUI WIDGET REPORTERS 
-;macrophage genome with the highest fitness score 
 to-report fittest-macrophage-genome
-  ifelse any? macrophages [
-    report [genome] of max-one-of macrophages [eat-count + (ticks-survived * 0.1)]
-  ] [
-    report last-fittest-macrophage-genome-1
-  ]
+  report last-fittest-macrophage-genome-1
 end
 
-;neutrophil genome with the highest fitness score 
+to-report fittest-macrophage-genome-second
+  report last-fittest-macrophage-genome-2
+end
+
 to-report fittest-neutrophil-genome
-  ifelse any? neutrophils [
-    report [genome] of max-one-of neutrophils [bacteria-killed - (friendly-fire * 0.5)]
-  ] [
-    report last-fittest-neutrophil-genome-1
-  ]
+  report last-fittest-neutrophil-genome-1
 end
 
-;bacteria genome of bacteria with the highest fitness score 
+to-report fittest-neutrophil-genome-second
+  report last-fittest-neutrophil-genome-2
+end
+  
+
 to-report fittest-bacteria-genome
-  ifelse any? bacteria [
-    report [genome] of max-one-of bacteria [ticks-survived + (times-fooled * 2)]
-  ] [
-    report last-fittest-bacteria-genome
-  ]
+  report last-fittest-bacteria-genome
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

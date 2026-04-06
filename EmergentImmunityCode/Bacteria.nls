@@ -13,12 +13,14 @@ bacteria-own [
   genome  ;evolves toward body dna over generations
   ticks-survived  ;how many ticks survived (fitness score)
   times-fooled  ;how many times an immune cell chose not to attack (fitness score)
+  similarity-to-body
 ]
 
 ;-------runs when setup button is clicked------
 to setup-bacteria
-  create-bacteria initial-bacteria-count [  
+  create-bacteria min (list initial-bacteria-count max-bacteria) [
     set genome randomGenomeFunction
+    set similarity-to-body genome-similarity genome body-genome
     set ticks-survived 0
     set times-fooled 0
     set shape "circle"
@@ -29,13 +31,7 @@ to setup-bacteria
 end
 
 ;-------runs every tick-------
-to update-bacteria 
-  ;save the longest surviving bacteria genome every tick
-  if any? bacteria [
-    set last-fittest-bacteria-genome [genome] of max-one-of bacteria [ticks-survived + (times-fooled * 2)]
-  ]
-  
-  
+to update-bacteria
   ask bacteria [
     set ticks-survived ticks-survived + 1
     bacteria-spread
@@ -46,12 +42,15 @@ end
 
 ;--------tries to copy this bacteria onto a neighbouring empty patch-------
 to bacteria-spread
+  if count bacteria >= max-bacteria [ stop ]
+  
   if random-float 100 < bacteria-spread-chance% [
 
     ; while we are still in the bacterium context
     ; once we do "ask empty-neighbour", context switches to the patch
     ; and we lose access to all turtle variables including genome
     let parent-genome genome
+    let parent-similarity similarity-to-body
 
     let empty-neighbour one-of neighbors with [not any? bacteria-on self]
     if empty-neighbour != nobody [
@@ -62,12 +61,13 @@ to bacteria-spread
         sprout-bacteria 1 [
           ; we are now in the new BACTERIUM context
           ; set genome first before anything else
-          set genome         parent-genome
+          set genome parent-genome
+          set similarity-to-body parent-similarity
           set ticks-survived 0
           set times-fooled   0
-          set shape          "circle"
-          set color          red
-          set size           1
+          set shape "circle"
+          set color red
+          set size  1
         ]
       ]
     ]
@@ -86,7 +86,15 @@ end
 to bacteria-update-colour
   let copy genome-similarity genome body-genome
   ;red = 15, orange = 25, yellow = 45 
-  set color 15 + (copy * 30)
+  if (similarity-to-body > 0) and (similarity-to-body <= 15) [
+    set color red 
+  ]
+  ifelse (similarity-to-body > 15) and (similarity-to-body <= 25) [
+    set color orange
+  ] [
+    set color yellow
+  ]
+
 end
 
 

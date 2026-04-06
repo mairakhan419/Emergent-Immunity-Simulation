@@ -1,5 +1,3 @@
-<<<<<<< Updated upstream
-=======
 patches-own [
   healthy?
   pheromone      ; death signal released when eaten
@@ -39,22 +37,18 @@ to update-healthy-cells
     ; Visualize pheromone trail so macrophages (and us) can see it
     ifelse healthy? [
       set pcolor green              ; living healthy cell
-    ] [
-      ifelse pheromone > 1 [
-        set pcolor scale-color green pheromone 0 60  ; pheromone glow
-      ] [
-        set pcolor white            ; empty space
-      ]
     ]
+    [
+      set pcolor white
+    ]
+   ; [
+     ; ifelse pheromone > 1 [
+ ;       set pcolor scale-color green pheromone 0 60  ; pheromone glow
+     ; ] [
+      ;  set pcolor white            ; empty space
+      ;]
+    ;]
   ]
   
-  ;regrow some empty patches into healthy cells each tick 
-  ask n-of min (list healthy-cell-regrowth-rate count patches with [not healthy?]) patches with [not healthy?] [
-    set healthy? true 
-    set eaten? false
-    set pheromone 0
-    set pcolor green
-  ]
   
 end
->>>>>>> Stashed changes
