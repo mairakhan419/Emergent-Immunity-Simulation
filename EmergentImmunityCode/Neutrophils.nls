@@ -1,0 +1,204 @@
+;neutrophils are the second wave of the immune repsonse 
+;after macrophages eat bacteria, they will p2 pheromone trail 
+;and the neutrophils will follow p2 trail and fire a spit attack that 
+;damages all cells nearby (including the healthy ones)
+
+
+;neutrophil genome:
+;C count -- sensitivity to p2 pheromone
+;T count -- damage radius for spit attack 
+;A and G unused by neutorphils here 
+
+
+breed [neutrophils neutrophil] ;declare neutrophil agent 
+
+;variables that every neutrophil agent will have 
+neutrophils-own [
+  genome
+  sensitivity
+  damage-radius
+  spit-count
+  max-spit
+  bacteria-killed  ;total bacteria killed across all spit attacks (fitness score measurement)
+  friendly-fire ;total healthy cells damaged in spit fire (fitness score penalty) 
+  
+]
+
+; ---- runs once when the setup button is clicked in main ----
+to setup-neutrophils
+  create-neutrophils neutrophil-spawn-rate [
+    initialise-neutrophil
+  ]
+end
+
+; ---- helper funciton to set up a single new neutrophil ----
+to initialise-neutrophil
+  ;build the genome from the slider values for C and T count
+  ;remaining characters randomly filled with As and Gs
+  let num-c neutrophil-sensitivity-c 
+  let num-t neutrophil-damage-radius-t
+  let num-random 16 - num-c - num-t
+  
+  ;build sections of the genome string and combine 
+  let c-section ifelse-value (num-c > 0) [ reduce word n-values num-c [i -> "C"]] [ "" ]
+  let t-section ifelse-value (num-t > 0) [ reduce word n-values num-t [i -> "T"]] [ "" ]
+  let random-section ifelse-value (num-random > 0) [ reduce word n-values num-random [i -> one-of ["A" "G"]] ] [ "" ]
+  set genome (word c-section t-section random-section)
+  
+  ;count Cs in the genome to set sensitivity 
+  set sensitivity length filter [c -> c = "C"] (n-values (length genome) [i -> substring genome i (i + 1)])
+  
+  ;count Ts in the genome to set damage radius 
+  set damage-radius length filter [c -> c = "T"] (n-values (length genome) [i -> substring genome i (i + 1)])
+  
+  ;neutrophils die after 30 spits 
+  set spit-count 0 
+  set max-spit 30 
+  
+  set bacteria-killed 0
+  set friendly-fire 0 
+  
+  ;make the neutrophil apperance 
+  set shape "circle"
+  set color blue 
+  set size 1
+  
+  ;place the neutrophils close to the macrophages pheromone trails 
+  ;if no p2 signals exist, then pick a random patch 
+  let start-patch one-of patches with [macrophages-pheromone > 0]
+  ifelse start-patch != nobody [
+    move-to start-patch 
+  ] [
+    move-to one-of patches
+  ]
+  
+end
+
+; ---- function runs every tick to update all neutrophil behaviour ----
+to update-neutrophils
+  ;spawn new neutrophils 
+  create-neutrophils neutrophil-spawn-rate [
+    initialise-neutrophil
+  ]
+  
+  ;keep track of the top two performing neutrophils 
+  if any? neutrophils [
+    let best1 max-one-of neutrophils [bacteria-killed - (friendly-fire * 0.5)]
+    set last-fittest-neutrophil-genome-1 [genome] of best1
+    
+    ifelse count neutrophils > 1 [
+      let best2 max-one-of (neutrophils with [self != best1]) [bacteria-killed - (friendly-fire * 0.5)]
+      set last-fittest-neutrophil-genome-2 [genome] of best2
+    ] [
+      set last-fittest-neutrophil-genome-2 last-fittest-neutrophil-genome-1
+    ]
+  ]
+  
+  ;tell every neutrophil to move, then attack 
+  ask neutrophils [
+    neutrophil-move
+    neutrophil-attack 
+  ]
+end
+
+; ---- function that decides where a neutrophil moves each tick ----
+to neutrophil-move 
+  ;calculate the minimum p2 signal strength needed to react 
+  ;if the pheromone on a neighbouring patch is stronger than the threshold the neutrophil moves toward ir 
+  ;is not, it moves randomly 
+  
+  ;threshold ranges 0 to 32
+  let threshold (16 - sensitivity) * 2
+  
+  ;look at the 8 neighbouing patches and find the one with the strongest p2 signal 
+  let best-neighbour max-one-of neighbors [macrophages-pheromone]
+  
+  ifelse [macrophages-pheromone] of best-neighbour > threshold [
+    move-to best-neighbour ;signal strong enough, move toward it
+  ] [
+    ;no singal detected, wander randomly 
+    rt random 50 - 25 
+    fd 1
+  ]
+end
+  
+
+; ---- function for firing spit attacks ----
+to neutrophil-attack
+  let all-in-range bacteria in-radius damage-radius
+  ;only target bacteria whose genome looks foreign from healthy cells 
+  let targetable-bacteria all-in-range with [
+    genome-similarity genome body-genome < (lvenchisten-function / 100)
+  ]
+  
+  ;bacteria gets credit for fooling immune cell (fitness counter)
+  let fooling-bacteria all-in-range with [
+    genome-similarity genome body-genome >= (lvenchisten-function / 100)
+  ]
+  
+  ask fooling-bacteria [set times-fooled times-fooled + 1]
+  
+  if any? targetable-bacteria [
+    ;count how many bacteria going to get killed (fitness measure)
+    let kill-count count targetable-bacteria
+    set bacteria-killed bacteria-killed + kill-count
+    
+    ask targetable-bacteria [die]  ;kill all targeted bacteria in the radius 
+    
+    ;also mark all healthy cells as eaten within damage radius (tradeoff) 
+    let damaged-cells patches in-radius damage-radius with [healthy?]
+    set friendly-fire friendly-fire + count damaged-cells
+    ask damaged-cells [set eaten? true] 
+    
+    ;count this as one spit 
+    set spit-count spit-count + 1
+  ]
+  
+  ;if this neutrophil used up its spit rounds, it dies off
+  if spit-count >= max-spit [die]
+end 
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

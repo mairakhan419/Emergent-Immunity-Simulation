@@ -1,0 +1,173 @@
+;macrophages are the first line of defence in the simulation 
+;when a healthy cell gets eaten by bacteria, it releases a distress pheromone (p1)
+;and then macrophages detect that signal, move toward it, and eat the bacteria.
+;after eating, macrophages leave their own pheromone (p2) used by the neutrophils 
+
+;macrophage genome:
+;A count --- sensitivity to p1 pheromone 
+;G count --- max-eat for have many bacteria hey can eat before dying off
+;T and C unused by macrophages 
+
+;copy check: before eating, the macrophage compares the bacteria genome to the body-genome
+;if the bacteria looks too similar to healthy cell, macrophage then leaves it alone 
+
+;creating new agent type called "macrophages"
+breed [macrophages macrophage]
+
+;p2 is the signal macrophages leave behind on grid patches after eating bacteria 
+;neutrophils will follow this later 
+patches-own [
+  macrophages-pheromone
+]
+
+;; ---- extra variables every macrophage agent will have ----
+macrophages-own [
+  genome      ;the 16-char dna string 
+  sensitivity ;how faint a p1 signal the macrophage can detect and will come from A count 
+  max-eat     ;how many bacteria it can eat before it dies of exhaustion and will come from G count 
+  eat-count   ; how many bacteria this macrophage has eaten so far 
+  ticks-survived ;how many ticks this macrophage survived, also used for fitness measure in evolution 
+]
+
+; ---- function runs once the setup button is clicked on the interface ----
+to setup-macrophages
+  ask patches [ set macrophages-pheromone 0 ]   ;reset all p2 pheromone values on every patch to 0 (clean slate) 
+  
+  ;create the starting batch of macrophage depending on the slider option 
+  create-macrophages macrophage-spawn-rate [
+    initialise-macrophage  ;run setup block for each new macrophage 
+  ]
+end
+
+; ---- helper function that sets up a new macrophage 
+to initialise-macrophage 
+
+  ;build genome using the slider values for A and G count, and then 
+  ;remaining characters will be randomly chosen for Ts and Cs
+  let num-a macrophage-sensitivity-a
+  let num-g macrophage-eat-capacity-g
+  let num-random max (list 0 (16 - num-a - num-g))
+
+  
+  ;build each section of the genome string separately and then combine it 
+; build each section only if it has characters, otherwise use empty string
+  let a-section ifelse-value (num-a > 0) [ reduce word n-values num-a [i -> "A"]] [ "" ]
+  let g-section ifelse-value (num-g > 0) [ reduce word n-values num-g [i -> "G"]] [ "" ]
+  let random-section ifelse-value (num-random > 0) [ reduce word n-values num-random [i -> one-of ["T" "C"]] ] [ "" ]
+  set genome (word a-section g-section random-section)
+  
+  ;count As in the genome to set sensitivity 
+  set sensitivity length filter [c -> c ="A"] (n-values (length genome) [i -> substring genome i (i + 1)])
+  
+  ;count Gs in the genome to set max-eat 
+  set max-eat length filter [c -> c = "G"] (n-values (length genome) [i -> substring genome i (i + 1)])
+  
+  ;set eat count to 0 
+  set eat-count 0
+  set ticks-survived 0
+  
+  ;make the macrophage look like a purple circle 
+  set shape "circle"
+  set color violet 
+  set size 1
+  
+  ; try to place the macrophage on a healthy cell patch to help starting defending tissues right away. 
+  ;if no healthy cell exists, pick random patch 
+  let start-patch one-of patches with [healthy?]
+  ifelse start-patch != nobody[
+    move-to start-patch
+  ][
+    move-to one-of patches
+  ]
+end
+
+; ---- update function, and runs for every tick ----
+to update-macrophages
+  ;spawn new macrophage every tick (mimics the production of new immune cell in the body)
+  create-macrophages macrophage-spawn-rate [
+    initialise-macrophage
+  ]
+  
+  ;spread the macrophages p2 pheromone signal to nearby patches 
+  diffuse macrophages-pheromone 0.25 
+  
+  ;make the macrophage pheromone fade little bit every tick 
+  ask patches [ set macrophages-pheromone (macrophages-pheromone * 0.98) ]
+  
+  ;keep track of the top two best performing macrophages  
+  if any? macrophages [
+    let best1 max-one-of macrophages [eat-count + (ticks-survived * 0.1)]
+    set last-fittest-macrophage-genome-1 [genome] of best1
+    
+    ifelse count macrophages > 1 [
+      let best2 max-one-of (macrophages with [self != best1]) [eat-count + (ticks-survived * 0.1)]
+      set last-fittest-macrophage-genome-2 [genome] of best2
+    ] [
+      set last-fittest-macrophage-genome-2 last-fittest-macrophage-genome-1
+    ]
+  ]
+  
+  ;tell every macrophage to move and eat 
+  ask macrophages [
+    set ticks-survived ticks-survived + 1
+    macrophage-move
+    macrophage-eat
+  ]
+  
+end
+
+; ---- function to decide where the macrophage moves each tick 
+to macrophage-move
+  ;calculate the minimum signal strength needed to react 
+  ;higher sensitivity means more As in dna genome = lower threshold (reats to fainter pheromone signals)
+  ;sensitivity ranges from 0 to 16, so threshold will range from 32 (barely sensitive) to 0 (super sensitive) 
+  let threshold (16 - sensitivity) * 2
+  
+  ;look at the 8 surrounding patches and find the one with the strongest distress 
+  ;p1 pheromone signal released from healthy cells when they get eaten by bacteria 
+  let best-neighbor max-one-of neighbors [pheromone]
+  
+  ifelse [pheromone] of best-neighbor > threshold [
+    ;the signal is string enough then move toward it 
+    move-to best-neighbor 
+  ] [
+    ;no signal detected, then random randomly 
+    rt random 50 - 25 ;turn a random amount between -25 and +25 degrees 
+    fd 1 ;move forwrad 1 step 
+  ]
+end
+
+; ---- this function handles eating bacteria  on the current patch ----
+to macrophage-eat 
+  ;check if any bacteria are sitting on the same patch as the macrophage 
+  if any? bacteria-here [
+    let target one-of bacteria-here
+    
+    ;if the bacteria genome looks to similar to the body genome, the macrophage mistakes it for
+    ;healthy tissue and leaves it alone 
+    let similarity genome-similarity ([genome] of target) body-genome
+    
+    ifelse similarity < (lvenchisten-function / 100 ) [
+      ask target [die]
+      set eat-count eat-count + 1
+      set macrophages-pheromone macrophages-pheromone + 30
+    ] [
+      ;leave bacteria alone, looks too much like healthy cell
+      ;this increments the bacterias fitness score 
+      ask target [set times-fooled times-fooled + 1]
+    ]
+  ]
+  if eat-count >= max-eat [die]
+  
+end
+
+
+
+
+
+
+
+
+
+
+

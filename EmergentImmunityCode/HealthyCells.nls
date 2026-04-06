@@ -1,0 +1,60 @@
+<<<<<<< Updated upstream
+=======
+patches-own [
+  healthy?
+  pheromone      ; death signal released when eaten
+  eaten?         ; tracks if this cell has been consumed by bacteria
+]
+
+to setup-healthy-cells
+  ask patches [
+    set healthy? false
+    set eaten? false
+    set pheromone 0
+    set pcolor white
+  ]
+  
+  ;pick number of healthy cells based on the ui slider 
+  ask n-of (count patches * (initial-healthy-cells-count / 100)) patches [
+    set healthy? true
+    set pheromone 0
+    set pcolor green
+  ]
+end
+
+to update-healthy-cells
+  ; Eaten cells release a burst of pheromone as distress signal
+  ask patches with [healthy? and eaten?] [
+    set pheromone pheromone + 50   ; burst release on death
+    set healthy? false
+    set pcolor white               ; cell is gone
+  ]
+
+  ; Pheromone diffuses and decays across all patches
+  diffuse pheromone 0.25
+
+  ask patches [
+    set pheromone pheromone * 0.98  ; evaporation
+
+    ; Visualize pheromone trail so macrophages (and us) can see it
+    ifelse healthy? [
+      set pcolor green              ; living healthy cell
+    ] [
+      ifelse pheromone > 1 [
+        set pcolor scale-color green pheromone 0 60  ; pheromone glow
+      ] [
+        set pcolor white            ; empty space
+      ]
+    ]
+  ]
+  
+  ;regrow some empty patches into healthy cells each tick 
+  ask n-of min (list healthy-cell-regrowth-rate count patches with [not healthy?]) patches with [not healthy?] [
+    set healthy? true 
+    set eaten? false
+    set pheromone 0
+    set pcolor green
+  ]
+  
+end
+>>>>>>> Stashed changes
