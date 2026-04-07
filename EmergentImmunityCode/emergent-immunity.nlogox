@@ -34,6 +34,7 @@ globals [
 ; ------ setup funciton: runs when setup button clicked -------
 to setup
   clear-all
+  default-settings
   set bases ["A" "G" "T" "C"]
   set generation 1  ;start on generation 1 
   
@@ -145,7 +146,40 @@ to-report send-best-neutrophil-genome
 end
 
 
-
+to default-settings
+  if Simulation-Model = "Infection Cleared"
+  [
+    set Initial-Healthy-Cells-Count 27
+    set Initial-Bacteria-Count 35
+    set Bacteria-Spread-Chance% 35
+    set Macrophage-Sensitivity-A 5
+    set Macrophage-Eat-Capacity-G 5
+    set Macrophage-Spawn-Rate 3
+    set Neutrophil-Sensitivity-C 4 
+    set Neutrophil-Damage-Radius-T 2
+    set Neutrophil-Spawn-Rate 4
+    set Mutation-Rate% 59
+    set lvenchisten-function 57
+  ]
+  if Simulation-Model = "Immune System Collapse"[
+    set Initial-Healthy-Cells-Count 15
+    set Initial-Bacteria-Count 55
+    set Bacteria-Spread-Chance% 65
+    set Macrophage-Sensitivity-A 2
+    set Macrophage-Eat-Capacity-G 2
+    set Macrophage-Spawn-Rate 2
+    set Neutrophil-Sensitivity-C 1 
+    set Neutrophil-Damage-Radius-T 1
+    set Neutrophil-Spawn-Rate 1
+    set Mutation-Rate% 70
+    set lvenchisten-function 80
+    
+  ]
+  if Simulation-Model = "Custom"[
+  ]
+  
+  
+end
 
 
 
@@ -166,25 +200,25 @@ end
     <plot x="915" autoPlotX="true" yMax="10.0" autoPlotY="true" y="250" xMin="0.0" height="160" legend="false" xMax="10.0" yMin="0.0" display="Immune Cell Activity" width="225" sizeVersion="0">
       <setup></setup>
       <update></update>
-      <pen interval="1.0" mode="0" display="default" color="-16777216" legend="true">
+      <pen interval="1.0" mode="0" display="default" color="-8630108" legend="true">
         <setup></setup>
-        <update>plot count turtles</update>
+        <update>plot count macrophages</update>
       </pen>
-      <pen interval="1.0" mode="0" display="pen-1" color="-7500403" legend="true">
+      <pen interval="1.0" mode="0" display="pen-1" color="-14070903" legend="true">
         <setup></setup>
-        <update></update>
+        <update>plot count neutrophils</update>
       </pen>
     </plot>
-    <plot x="915" autoPlotX="true" yMax="10.0" autoPlotY="true" y="420" xMin="0.0" height="160" legend="false" xMax="10.0" yMin="0.0" display="Genome Fitness (avg)" width="225" sizeVersion="0">
+    <plot x="915" autoPlotX="false" yMax="1.0" autoPlotY="false" y="420" xMin="0.0" height="160" legend="false" xMax="10.0" yMin="0.0" display="Genome Fitness (avg)" width="225" sizeVersion="0">
       <setup></setup>
       <update></update>
-      <pen interval="1.0" mode="0" display="default" color="-16777216" legend="true">
+      <pen interval="1.0" mode="0" display="default" color="-2674135" legend="true">
         <setup></setup>
-        <update>plot count turtles</update>
+        <update>plot best-bacteria</update>
       </pen>
-      <pen interval="1.0" mode="0" display="pen-1" color="-7500403" legend="true">
+      <pen interval="1.0" mode="0" display="pen-1" color="-13840069" legend="true">
         <setup></setup>
-        <update></update>
+        <update>plot report-levenshtein-distance </update>
       </pen>
     </plot>
     <monitor x="915" precision="17" y="45" height="60" fontSize="10" display="Top 1 Macrophage Genome" width="160" sizeVersion="0">fittest-macrophage-genome</monitor>
@@ -195,44 +229,38 @@ end
     <monitor x="915" precision="17" y="740" height="60" fontSize="10" display="dead cells" width="110" sizeVersion="0">dead-cell-count</monitor>
     <monitor x="1030" precision="17" y="740" height="60" fontSize="10" display="generation" width="110" sizeVersion="0">generation-number</monitor>
     <monitor x="915" precision="17" y="180" height="60" fontSize="10" display="Top Bacteria Genome" width="160" sizeVersion="0">fittest-bacteria-genome</monitor>
-    <plot x="1150" autoPlotX="true" yMax="10.0" autoPlotY="true" y="320" xMin="0.0" height="160" legend="false" xMax="10.0" yMin="0.0" display="Cell Population Over Time" width="225" sizeVersion="0">
+    <plot x="1150" autoPlotX="true" yMax="10.0" autoPlotY="true" y="320" xMin="0.0" height="160" legend="false" xMax="10.0" yMin="0.0" display="Bacteria Population Over Time" width="225" sizeVersion="0">
       <setup></setup>
       <update></update>
-      <pen interval="1.0" mode="0" display="default" color="-16777216" legend="true">
+      <pen interval="1.0" mode="0" display="default" color="-2674135" legend="true">
         <setup></setup>
-        <update>plot count turtles</update>
-      </pen>
-      <pen interval="1.0" mode="0" display="pen-1" color="-7500403" legend="true">
-        <setup></setup>
-        <update></update>
-      </pen>
-      <pen interval="1.0" mode="0" display="pen-2" color="-2674135" legend="true">
-        <setup></setup>
-        <update></update>
+        <update>plot count bacteria</update>
       </pen>
     </plot>
-    <slider x="5" step="1" y="245" max="100" width="250" display="Bacteria-Spread-Chance%" height="50" min="0" direction="Horizontal" default="19.0" variable="Bacteria-Spread-Chance%"></slider>
-    <slider x="5" step="1" y="190" max="100" width="250" display="Initial-Bacteria-Count" height="50" min="0" direction="Horizontal" default="18.0" variable="Initial-Bacteria-Count"></slider>
+    <slider x="5" step="1" y="245" max="100" width="250" display="Bacteria-Spread-Chance%" height="50" min="0" direction="Horizontal" default="65.0" variable="Bacteria-Spread-Chance%"></slider>
+    <slider x="5" step="1" y="190" max="100" width="250" display="Initial-Bacteria-Count" height="50" min="0" direction="Horizontal" default="55.0" variable="Initial-Bacteria-Count"></slider>
     <chooser x="10" y="5" height="60" variable="Simulation-Model" current="0" width="250" display="Simulation-Model">
-      <choice type="string" value="Emergent Immunity"></choice>
+      <choice type="string" value="Immune System Collapse"></choice>
+      <choice type="string" value="Infection Cleared"></choice>
+      <choice type="string" value="Custom"></choice>
     </chooser>
     <button x="10" y="70" height="40" disableUntilTicks="false" forever="false" kind="Observer" width="75" display="Setup">setup</button>
     <button x="90" y="70" height="40" disableUntilTicks="false" forever="false" kind="Observer" width="85" display="Go Once"></button>
     <button x="180" y="70" height="40" disableUntilTicks="false" forever="true" kind="Observer" width="80" display="Go ">go</button>
     <note x="5" y="100" backgroundDark="0" fontSize="11" width="250" markdown="true" height="40" textColorDark="-15302303" textColorLight="-15302303" backgroundLight="0">---------------- POPULATION ----------------</note>
-    <slider x="5" step="1" y="135" max="100" width="250" display="Initial-Healthy-Cells-Count" height="50" min="0" direction="Horizontal" default="24.0" variable="Initial-Healthy-Cells-Count"></slider>
+    <slider x="5" step="1" y="135" max="100" width="250" display="Initial-Healthy-Cells-Count" height="50" min="0" direction="Horizontal" default="15.0" variable="Initial-Healthy-Cells-Count"></slider>
     <monitor x="915" precision="17" y="610" height="60" fontSize="10" display="healthy cells" width="110" sizeVersion="0">healthy-cell-count</monitor>
     <note x="0" y="280" backgroundDark="0" fontSize="11" width="250" markdown="true" height="41" textColorDark="-15302303" textColorLight="-15302303" backgroundLight="0">---------- MACROPHAGE BEHAVIOUR ---------</note>
-    <slider x="5" step="1" y="315" max="16" width="250" display="Macrophage-Sensitivity-A" height="50" min="0" direction="Horizontal" default="5.0" variable="Macrophage-Sensitivity-A"></slider>
-    <slider x="5" step="1" y="370" max="16" width="250" display="Macrophage-Eat-Capacity-G" height="50" min="0" direction="Horizontal" default="5.0" variable="Macrophage-Eat-Capacity-G"></slider>
-    <slider x="5" step="1" y="425" max="100" width="250" display="Macrophage-Spawn-Rate" height="50" min="0" direction="Horizontal" default="34.0" variable="Macrophage-Spawn-Rate"></slider>
+    <slider x="5" step="1" y="315" max="16" width="250" display="Macrophage-Sensitivity-A" height="50" min="0" direction="Horizontal" default="2.0" variable="Macrophage-Sensitivity-A"></slider>
+    <slider x="5" step="1" y="370" max="16" width="250" display="Macrophage-Eat-Capacity-G" height="50" min="0" direction="Horizontal" default="2.0" variable="Macrophage-Eat-Capacity-G"></slider>
+    <slider x="5" step="1" y="425" max="100" width="250" display="Macrophage-Spawn-Rate" height="50" min="0" direction="Horizontal" default="2.0" variable="Macrophage-Spawn-Rate"></slider>
     <note x="5" y="460" backgroundDark="0" fontSize="11" width="250" markdown="true" height="41" textColorDark="-15302303" textColorLight="-15302303" backgroundLight="0">---------- NEUTROPHIL BEHAVIOUR ---------</note>
-    <slider x="5" step="1" y="495" max="16" width="250" display="Neutrophil-Sensitivity-C" height="50" min="0" direction="Horizontal" default="4.0" variable="Neutrophil-Sensitivity-C"></slider>
-    <slider x="5" step="1" y="550" max="16" width="250" display="Neutrophil-Damage-Radius-T" height="50" min="0" direction="Horizontal" default="5.0" variable="Neutrophil-Damage-Radius-T"></slider>
-    <slider x="5" step="1" y="605" max="16" width="250" display="Neutrophil-Spawn-Rate" height="50" min="0" direction="Horizontal" default="4.0" variable="Neutrophil-Spawn-Rate"></slider>
+    <slider x="5" step="1" y="495" max="16" width="250" display="Neutrophil-Sensitivity-C" height="50" min="0" direction="Horizontal" default="1.0" variable="Neutrophil-Sensitivity-C"></slider>
+    <slider x="5" step="1" y="550" max="16" width="250" display="Neutrophil-Damage-Radius-T" height="50" min="0" direction="Horizontal" default="1.0" variable="Neutrophil-Damage-Radius-T"></slider>
+    <slider x="5" step="1" y="605" max="16" width="250" display="Neutrophil-Spawn-Rate" height="50" min="0" direction="Horizontal" default="1.0" variable="Neutrophil-Spawn-Rate"></slider>
     <note x="10" y="640" backgroundDark="0" fontSize="11" width="250" markdown="true" height="41" textColorDark="-15302303" textColorLight="-15302303" backgroundLight="0">---------------- EVOLUTION ----------------</note>
-    <slider x="5" step="1" y="675" max="100" width="250" display="Mutation-Rate%" height="50" min="0" direction="Horizontal" default="30.0" variable="Mutation-Rate%"></slider>
-    <slider x="5" step="1" y="730" max="100" width="250" display="lvenchisten-function" height="50" min="0" direction="Horizontal" default="13.0" variable="lvenchisten-function"></slider>
+    <slider x="5" step="1" y="675" max="100" width="250" display="Mutation-Rate%" height="50" min="0" direction="Horizontal" default="70.0" variable="Mutation-Rate%"></slider>
+    <slider x="5" step="1" y="730" max="100" width="250" display="lvenchisten-function" height="50" min="0" direction="Horizontal" default="80.0" variable="lvenchisten-function"></slider>
   </widgets>
   <info>## WHAT IS IT?
 

@@ -140,8 +140,9 @@ to macrophage-eat [similarity-threshold]
     ;if the bacteria genome looks to similar to the body genome, the macrophage mistakes it for
     ;healthy tissue and leaves it alone 
     let similarity [similarity-to-body] of target
-    
+;     show (list similarity similarity-threshold) 
     ifelse similarity < similarity-threshold [
+;       show (list similarity similarity-threshold)
       ask target [die]
       set eat-count eat-count + 1
       ask patch-here [

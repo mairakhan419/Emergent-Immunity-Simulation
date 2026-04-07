@@ -81,21 +81,58 @@ to bacteria-eat
   ]
 end
 
-
 ;---------shifts colour from red to yellow or orange as copy score increases--------
 to bacteria-update-colour
-  let copy genome-similarity genome body-genome
   ;red = 15, orange = 25, yellow = 45 
-  if (similarity-to-body > 0) and (similarity-to-body <= 15) [
-    set color red 
-  ]
-  ifelse (similarity-to-body > 15) and (similarity-to-body <= 25) [
-    set color orange
-  ] [
-    set color yellow
-  ]
+  let copy genome-similarity genome body-genome
+;   let similarity-to-body genome-similarity genome body-genome
 
+  ifelse (similarity-to-body > 0) and (similarity-to-body <= 15) [
+    set color red
+  ] 
+  [
+    ifelse (similarity-to-body > 15) and (similarity-to-body <= 25) [
+      set color orange
+    ] 
+    [
+      ifelse (similarity-to-body > 25) and (similarity-to-body <= 45) [
+        set color yellow
+      ]
+      [
+        ; optional: handle values outside range
+        set color white  ;; or whatever default
+      ]
+    ]
+  ]
 end
+
+;; get simularity of top bacteria
+to-report best-bacteria
+  ifelse any? bacteria
+  [
+    report max [similarity-to-body] of bacteria
+  ] [ 
+    report 0]
+end
+
+;; get simularity of top bacteria
+to-report report-levenshtein-distance 
+    report  (lvenchisten-function / 100)
+end
+;---------shifts colour from red to yellow or orange as copy score increases--------
+; to bacteria-update-colour
+;   let copy genome-similarity genome body-genome
+;   ;red = 15, orange = 25, yellow = 45 
+;   if (similarity-to-body > 0) and (similarity-to-body <= 15) [
+;     set color red 
+;   ]
+;   ifelse (similarity-to-body > 15) and (similarity-to-body <= 25) [
+;     set color orange
+;   ] [
+;     set color yellow
+;   ]
+
+; end
 
 
 
