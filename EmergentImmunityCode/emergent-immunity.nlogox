@@ -29,6 +29,20 @@ globals [
   max-bacteria
   max-macrophages
   max-neutrophils
+  
+  ; tracks best genomes even from agents that died mid-generation ----
+  best-macrophage-genome-ever-1   
+  best-macrophage-fitness-ever-1   
+  best-macrophage-genome-ever-2    
+  best-macrophage-fitness-ever-2   
+
+  best-neutrophil-genome-ever-1   
+  best-neutrophil-fitness-ever-1   
+  best-neutrophil-genome-ever-2   
+  best-neutrophil-fitness-ever-2   
+
+  best-bacteria-genome-ever        
+  best-bacteria-fitness-ever       
 ]
 
 ; ------ setup function: runs when setup button clicked -------
@@ -49,8 +63,21 @@ to setup
   set last-fittest-neutrophil-genome-1 ""
   set last-fittest-neutrophil-genome-2 ""
   set last-fittest-bacteria-genome ""
+  
+  set best-macrophage-genome-ever-1 ""
+  set best-macrophage-fitness-ever-1 0
+  set best-macrophage-genome-ever-2 ""
+  set best-macrophage-fitness-ever-2 0
 
-  ; keep breed sizes bounded so later ticks do not become dramatically slower
+  set best-neutrophil-genome-ever-1 ""
+  set best-neutrophil-fitness-ever-1 0
+  set best-neutrophil-genome-ever-2 ""
+  set best-neutrophil-fitness-ever-2 0
+
+  set best-bacteria-genome-ever ""
+  set best-bacteria-fitness-ever 0  
+
+  ; max population size variables 
   set max-bacteria    min (list (count patches) (max (list 150 (initial-bacteria-count * 30))))
   set max-macrophages min (list (count patches) (max (list 40  (macrophage-spawn-rate * 20))))
   set max-neutrophils min (list (count patches) (max (list 30  (neutrophil-spawn-rate * 20))))
@@ -93,7 +120,7 @@ to go
     evolve-macrophages
     evolve-neutrophils
     evolve-bacteria
-    respawn-healthy-cells  ; NEW: restore 10% of healthy tissue each generation
+    respawn-healthy-cells  ; restore 10% of healthy tissue each generation
     set generation generation + 1
     output-print (word "Generation " generation " started at tick " ticks)
   ]
@@ -102,7 +129,6 @@ to go
 end
 
 ; ---- MONITOR REPORTERS ----
-
 ; how many healthy cells are there on the grid right now
 to-report healthy-cell-count
   report count patches with [healthy?]
@@ -143,11 +169,8 @@ to-report bacteria-copy-score
   ]
 end
 
-; ---- GUI: SORTED genome display reporters ----
-; these replace the raw genome string monitors in the interface
+; ---- GUI: genome display reporters ----
 ; sorting into ACGT order makes nucleotide counts easy to read at a glance
-; wire each of these to the corresponding monitor box in the NetLogo interface
-
 to-report gui-top-macrophage-genome-1
   let g last-fittest-macrophage-genome-1
   if not is-string? g or length g = 0 [ report "—" ]
@@ -195,7 +218,7 @@ to-report sort-genome-string [g]
   report result
 end
 
-; kept for backwards compatibility with existing interface monitors
+; can delete now i think??
 to-report second-best-macrophage-genome
   report gui-top-macrophage-genome-2
 end
@@ -247,41 +270,29 @@ end]]></code>
     <monitor x="915" precision="17" y="675" height="60" fontSize="10" display="macrophage cells" width="110" sizeVersion="0">macrophage-count</monitor>
     <monitor x="1030" precision="17" y="675" height="60" fontSize="10" display="neutrophils cells" width="110" sizeVersion="0">neutrophil-count</monitor>
     <monitor x="1030" precision="17" y="740" height="60" fontSize="10" display="generation" width="110" sizeVersion="0">generation-number</monitor>
-    <slider x="5" step="1" y="245" max="100" width="250" display="Bacteria-Spread-Chance%" height="50" min="0" direction="Horizontal" default="22.0" variable="Bacteria-Spread-Chance%"></slider>
-    <slider x="5" step="1" y="190" max="100" width="250" display="Initial-Bacteria-Count" height="50" min="0" direction="Horizontal" default="34.0" variable="Initial-Bacteria-Count"></slider>
+    <slider x="5" step="1" y="245" max="100" width="250" display="Bacteria-Spread-Chance%" height="50" min="0" direction="Horizontal" default="38.0" variable="Bacteria-Spread-Chance%"></slider>
+    <slider x="5" step="1" y="190" max="100" width="250" display="Initial-Bacteria-Count" height="50" min="0" direction="Horizontal" default="44.0" variable="Initial-Bacteria-Count"></slider>
     <chooser x="10" y="5" height="60" variable="Simulation-Model" current="2" width="250" display="Simulation-Model">
       <choice type="string" value="Immune System Collapse"></choice>
       <choice type="string" value="Infection Cleared"></choice>
       <choice type="string" value="Custom"></choice>
     </chooser>
     <button x="10" y="70" height="40" disableUntilTicks="false" forever="false" kind="Observer" width="75" display="Setup">setup</button>
-    <button x="90" y="70" height="40" disableUntilTicks="false" forever="false" kind="Observer" width="85" display="Go Once"></button>
+    <button x="90" y="70" height="40" disableUntilTicks="false" forever="false" kind="Observer" width="85" display="Go Once">go</button>
     <button x="180" y="70" height="40" disableUntilTicks="false" forever="true" kind="Observer" width="80" display="Go ">go</button>
     <note x="5" y="100" backgroundDark="0" fontSize="11" width="250" markdown="true" height="40" textColorDark="-15302303" textColorLight="-15302303" backgroundLight="0">---------------- POPULATION ----------------</note>
-    <slider x="5" step="1" y="135" max="100" width="250" display="Initial-Healthy-Cells-Count" height="50" min="0" direction="Horizontal" default="15.0" variable="Initial-Healthy-Cells-Count"></slider>
-    <slider x="5" step="1" y="760" max="100" width="250" display="levenshtein-similarity-threshold" height="50" min="0" direction="Horizontal" default="25.0" variable="levenshtein-similarity-threshold"></slider>
-    <slider x="5" step="1" y="705" max="100" width="250" display="Mutation-Rate%" height="50" min="0" direction="Horizontal" default="70.0" variable="Mutation-Rate%"></slider>
+    <slider x="5" step="1" y="135" max="100" width="250" display="Initial-Healthy-Cells-Count" height="50" min="0" direction="Horizontal" default="43.0" variable="Initial-Healthy-Cells-Count"></slider>
+    <slider x="5" step="1" y="760" max="100" width="250" display="levenshtein-similarity-threshold" height="50" min="0" direction="Horizontal" default="52.0" variable="levenshtein-similarity-threshold"></slider>
+    <slider x="5" step="1" y="705" max="100" width="250" display="Mutation-Rate%" height="50" min="0" direction="Horizontal" default="45.0" variable="Mutation-Rate%"></slider>
     <note x="10" y="665" backgroundDark="0" fontSize="11" width="250" markdown="true" height="35" textColorDark="-15302303" textColorLight="-15302303" backgroundLight="0">---------------- EVOLUTION ----------------</note>
     <slider x="5" step="1" y="615" max="16" width="250" display="Neutrophil-Spawn-Rate" height="50" min="0" direction="Horizontal" default="1.0" variable="Neutrophil-Spawn-Rate"></slider>
     <slider x="5" step="1" y="565" max="16" width="250" display="Neutrophil-Damage-Radius-T" height="50" min="0" direction="Horizontal" default="1.0" variable="Neutrophil-Damage-Radius-T"></slider>
     <slider x="5" step="1" y="515" max="16" width="250" display="Neutrophil-Sensitivity-C" height="50" min="0" direction="Horizontal" default="1.0" variable="Neutrophil-Sensitivity-C"></slider>
     <note x="5" y="470" backgroundDark="0" fontSize="11" width="250" markdown="true" height="41" textColorDark="-15302303" textColorLight="-15302303" backgroundLight="0">---------- NEUTROPHIL BEHAVIOUR ---------</note>
     <slider x="5" step="1" y="430" max="100" width="250" display="Macrophage-Spawn-Rate" height="50" min="0" direction="Horizontal" default="2.0" variable="Macrophage-Spawn-Rate"></slider>
-    <slider x="5" step="1" y="375" max="16" width="250" display="Macrophage-Eat-Capacity-G" height="50" min="0" direction="Horizontal" default="2.0" variable="Macrophage-Eat-Capacity-G"></slider>
-    <slider x="5" step="1" y="320" max="16" width="250" display="Macrophage-Sensitivity-A" height="50" min="0" direction="Horizontal" default="2.0" variable="Macrophage-Sensitivity-A"></slider>
+    <slider x="5" step="1" y="375" max="16" width="250" display="Macrophage-Eat-Capacity-G" height="50" min="0" direction="Horizontal" default="1.0" variable="Macrophage-Eat-Capacity-G"></slider>
+    <slider x="5" step="1" y="320" max="16" width="250" display="Macrophage-Sensitivity-A" height="50" min="0" direction="Horizontal" default="1.0" variable="Macrophage-Sensitivity-A"></slider>
     <note x="0" y="285" backgroundDark="0" fontSize="11" width="250" markdown="true" height="41" textColorDark="-15302303" textColorLight="-15302303" backgroundLight="0">---------- MACROPHAGE BEHAVIOUR ---------</note>
-    <plot x="1150" autoPlotX="false" yMax="1.0" autoPlotY="false" y="290" xMin="0.0" height="240" legend="true" xMax="500.0" yMin="0.0" display="Genome Fitness" width="225" sizeVersion="0">
-      <setup></setup>
-      <update></update>
-      <pen interval="1.0" mode="0" display="bacteria genome" color="-2674135" legend="true">
-        <setup></setup>
-        <update>plot best-bacteria</update>
-      </pen>
-      <pen interval="1.0" mode="0" display="similarity threshold" color="-13840069" legend="true">
-        <setup></setup>
-        <update>plot (levenshtein-similarity-threshold / 100)</update>
-      </pen>
-    </plot>
     <monitor x="915" precision="17" y="740" height="60" fontSize="10" display="dead cells" width="110" sizeVersion="0">dead-cell-count</monitor>
     <monitor x="1145" precision="17" y="675" height="60" fontSize="10" display="bacteria" width="110" sizeVersion="0">bacteria-count</monitor>
     <monitor x="1150" precision="17" y="740" height="60" fontSize="10" display="healthy cells" width="110" sizeVersion="0">healthy-cell-count</monitor>
@@ -301,49 +312,170 @@ end]]></code>
         <setup></setup>
         <update>plot count macrophages</update>
       </pen>
-      <pen interval="1.0" mode="0" display="count of neutrophils" color="-14070903" legend="true">
+      <pen interval="1.0" mode="0" display="count of neutrophils" color="-4079321" legend="true">
         <setup></setup>
         <update>plot count neutrophils</update>
       </pen>
     </plot>
     <note x="910" y="625" backgroundDark="0" fontSize="11" width="250" markdown="true" height="41" textColorDark="-15302303" textColorLight="-15302303" backgroundLight="0">------------------- LIVE COUNTS -----------------</note>
+    <plot x="1150" autoPlotX="false" yMax="1.0" autoPlotY="false" y="275" xMin="0.0" height="315" legend="true" xMax="500.0" yMin="0.0" display="Bacteria's Mimcry Progress" width="245" sizeVersion="0">
+      <setup></setup>
+      <update></update>
+      <pen interval="1.0" mode="0" display="best bacteria similarity" color="-2674135" legend="true">
+        <setup></setup>
+        <update>plot best-bacteria</update>
+      </pen>
+      <pen interval="1.0" mode="0" display="similarity threshold" color="-13840069" legend="true">
+        <setup></setup>
+        <update>plot (levenshtein-similarity-threshold / 100)</update>
+      </pen>
+      <pen interval="1.0" mode="0" display="mean bacteria similarity" color="-13791810" legend="true">
+        <setup></setup>
+        <update>if any? bacteria [ plot mean [similarity-to-body] of bacteria ]</update>
+      </pen>
+    </plot>
   </widgets>
-  <info>## WHAT IS IT?
+  <info><![CDATA[# WHAT IS IT?
 
-(a general understanding of what the model is trying to show or explain)
+Emergent Immunity is an agent-based simulation of a simplified human immune system responding to a bacterial infection. The model explores how complex defensive behaviour can emerge from simple rules followed by individual immune cells, and how both the immune system and the bacteria co-evolve over time through genetic selection.
 
-## HOW IT WORKS
+The central mechanic is **molecular mimicry**, meaning when bacteria evolve their genome to become increasingly similar to the body's own healthy cell DNA signature. The closer a bacteria cell's genome is to the body genome, the harder it is for immune cells to detect and attack it. This creates an evolutionary arms race: bacteria try to hide by looking like healthy tissue, while immune cells evolve to become better at detecting and eliminating foreign genomes.
 
-(what rules the agents use to create the overall behavior of the model)
+The simulation models two cell types from the immune system, macrophages (first responders) and neutrophils (aggressive second wave). And shows how their populations evolve over many generations to better combat an adapting bacterial infection.
 
-## HOW TO USE IT
+# HOW IT WORKS
 
-(how to use the model, including a description of each of the items in the Interface tab)
+## The Grid
+The simulation world is a grid of patches representing body tissue. Green patches are living healthy cells. White patches are dead or empty tissue. Bacteria, macrophages, and neutrophils move across this grid as agents.
 
-## THINGS TO NOTICE
+## Healthy Cells and Pheromones
+When bacteria eat a healthy cell, that cell releases a distress chemical signal called **pheromone p1**. This signal diffuses outward across neighbouring patches and slowly evaporates over time, creating a chemical gradient that points toward the site of infection. Healthy tissue slowly regenerates every 10 ticks (2% of original count) and receives a larger boost in respawning every 50 ticks (10% of original count), during a whole running of the simulation, to simulate natural tissue repair.
 
-(suggested things for the user to notice while running the model)
+## Bacteria (red/orange/yellow/white monster agents)
+Bacteria spread by copying themselves onto neighbouring empty patches. Each bacteria cell carries a **16-character genome** made up of the bases A, G, T, and C. Their goal through evolution is to make their genome as similar as possible to the body-genome, a fixed 16-character DNA string generated once at setup representing healthy tissue.
 
-## THINGS TO TRY
+Bacteria colour indicates how close their genome is to the body genome:
+- **Red** — very different (< 30% similar) — easy for immune cells to detect
+- **Orange** — partial mimicry (30–60% similar)
+- **Yellow** — strong mimicry (60–85% similar) — hard to detect
+- **White** — near-perfect camouflage (> 85% similar) — almost invisible to immunity
 
-(suggested things for the user to try to do (move sliders, switches, etc.) with the model)
+Every 50 ticks, the fittest bacteria cell (scored by ticks survived + (times fooled × 2) + (similarity × 10)) is selected as the parent for the next generation. New bacteria are produced via **directed mutation**, meaning each genome character of the bacteria has a small chance of being nudged toward the matching body-genome base, so mimicry improves gradually and visibly over generations.
 
-## EXTENDING THE MODEL
+## Macrophages (violet blob agents)
+Macrophages are the first line of immune defence. They continuously patrol the tissue and follow the p1 pheromone leading them to the infection sites. When a macrophage encounters bacteria cells, it checks whether that bacteria's genome is similar enough to the body genome. If the similarity is below the detection threshold, the macrophage eats the bacteria cell and deposits a **p2 pheromone** trail. If the similarity is above the threshold, the macrophage mistakes the bacteria for healthy tissue and leaves it alone, meaning the bacteria was able to successfully mimic the bodys genome. 
 
-(suggested things to add or change in the Code tab to make the model more complicated, detailed, accurate, etc.)
+Macrophage genome encoding:
+- **A count** — sensitivity to p1 pheromone (more A = detects fainter signals)
+- **G count** — max-eat capacity (more G = can eat more bacteria before dying)
+- T and C are unused filler characters
 
-## NETLOGO FEATURES
+Every 50 ticks, the two fittest macrophages (scored by (eat-count × 5) + (ticks-survived × 0.1)) are selected as parents. Their genomes are combined using crossover recombination at some point p and then lightly mutated to produce the next generation.
 
-(interesting or unusual features of NetLogo that the model uses, particularly in the Code tab; or where workarounds were needed for missing features)
+## Neutrophils (yellow pink blobs)
+Neutrophils are the aggressive second wave. They are only recruited when macrophages have been active when the total p2 pheromone, left off by macrophages, on the grid exceeds a threshold of 10. Neutrophils follow the p2 trail and fire a **spit attack** damaging all agents within their damage radius, including healthy cells. This collateral tissue damage models real inflammatory damage caused by neutrophil activity during infection.
 
-## RELATED MODELS
+Neutrophil genome encoding:
+- **C count** — sensitivity to p2 pheromone (more C = follows fainter macrophage trails)
+- **T count** — damage radius for spit attack (more T = larger area-of-effect)
+- A and G are unused filler characters
 
-(models in the NetLogo Models Library and elsewhere which are of related interest)
+Neutrophils die after 30 spit attacks or after 150 ticks of life, whichever comes first. Every 50 ticks, the two fittest neutrophils (scored by (bacteria-killed × 5) − (friendly-fire × 0.5)) are selected as parents for the next generation using the same  recombination and mutation method as for macrophages.
+
+## Evolution Cycle
+Every 50 ticks all three populations undergo a generational evolution phase:
+1. The fittest individuals are identified based on their fitness scores
+2. Immune cells (macrophages and neutrophils) reproduce sexually via recombination of two parent genomes followed by mutation
+3. Bacteria reproduce asexually via directed mutation of a single parent genome toward the body-genome
+4. The old population is replaced entirely by the new generation
+5. Healthy tissue receives a 10% regeneration boost
+
+# HOW TO USE IT
+
+## Setup and Running
+- **Model Speed** --- make sure the speed is a good pace to run simulation, having it running too fast won't show interactions of cells properly 
+- **Simulation-Model dropdown** — choose a preset scenario: "Infection Cleared" (immune response wins), "Immune System Collapse" (bacteria overwhelm immune system), or "Custom" (manual control of all sliders)
+- **Setup** — initialises the grid, places all agents, and generates the body-genome
+- **Go Once** — advances the simulation by a single tick
+- **Go** — runs the simulation continuously until an end condition is met
+
+## Population Sliders
+- **Initial-Healthy-Cells-Count** — percentage of grid patches that start as healthy tissue (higher = more tissue to defend)
+- **Initial-Bacteria-Count** — number of bacteria at the start of the simulation (37 chosen = 37 * 100 = 370 initial bacteria cells)
+- **Bacteria-Spread-Chance%** — probability each bacteria cell spreads to a neighbouring patch each tick (higher = faster infection spread)
+
+## Macrophage Behaviour Sliders
+- **Macrophage-Sensitivity-A** — number of A characters in starting macrophage genome (controls p1 detection sensitivity)
+- **Macrophage-Eat-Capacity-G** — number of G characters in starting macrophage genome (controls how many bacteria each macrophage can eat before dying)
+- **Macrophage-Spawn-Rate** — how many new macrophages are produced per tick up to the population cap
+
+## Neutrophil Behaviour Sliders
+- **Neutrophil-Sensitivity-C** — number of C characters in starting neutrophil genome (controls p2 detection sensitivity)
+- **Neutrophil-Damage-Radius-T** — number of T characters in starting neutrophil genome (controls spit attack radius)
+- **Neutrophil-Spawn-Rate** — how many new neutrophils are produced per tick when p2 signal is active
+
+## Evolution Sliders
+- **Mutation-Rate%** — controls the rate of genome mutation each generation. For bacteria this is divided by 1000 to produce a slow directed climb. For immune cells this is divided by 100 for light random mutation after recombination.
+- **levenshtein-similarity-threshold** — the genome similarity score (0–100) above which immune cells mistake bacteria for healthy tissue and leave them alone. Higher values make the immune system stricter and easier to detect bacteria cells pretending to be healthy cells.
+
+## Analysis Panel
+- **Top 1 / Top 2 Macrophage Genome** — the sorted genomes of the two fittest macrophages from the last evolution cycle. Sorted into ACGT order so nucleotide counts are easy to read at a glance.
+- **Top 1 / Top 2 Neutrophil Genome** — the sorted genomes of the two fittest neutrophils
+- **Top Bacteria Genome** — the genome of the fittest bacterium from the last evolution cycle
+
+## Live Counts
+- **healthy cells** — current number of living healthy tissue patches
+- **bacteria** — current number of live bacteria agents
+- **macrophage cells** — current number of live macrophage agents
+- **neutrophil cells** — current number of live neutrophil agents
+- **dead cells** — total number of patches that have been eaten by bacteria or killed in spit attack from neutrophils
+- **generation** — current evolutionary generation number
+
+## Graphs
+- **Immune Cell Activity** — tracks macrophage and neutrophil population sizes over time
+- **Bacteria Mimcry Progress** — tracks bacteria mimicry progress over time. The red line shows the best bacteria similarity score, the blue line shows the mean bacteria similarity score, and the green line shows the immune detection threshold. Watch for the red/blue lines climbing toward and crossing the green threshold line, this is the moment bacteria successfully fool the immune system.
+- **Bacteria Population Over Time** — tracks total bacteria count over time
+
+# THINGS TO NOTICE
+
+- **Bacteria colour shift** — watch bacteria gradually change from red → orange → yellow → white over many generations as directed mutation improves their mimicry of the body genome
+- **Pheromone gradients** — macrophages cluster and converge toward areas where bacteria are actively eating healthy cells, following the invisible p1 chemical trail
+- **Genome convergence** — the Analysis panel genome monitors update every 50 ticks. Over many generations, macrophage genomes should accumulate more A and G characters, and neutrophil genomes should accumulate more C and T characters, reflecting selection pressure on the traits that improve survival
+- **Arms race on the graph** — on the Bacteria Mimcry Progress graph, watch the bacteria similarity lines slowly climb toward the threshold line. If they cross it, bacteria have achieved successful molecular mimicry and immune collapse may follow
+- **Friendly fire** — neutrophil spit attacks kill bacteria in a radius but also destroy healthy tissue in the same area, visible as white patches appearing near areas of active neutrophil attack
+
+# THINGS TO TRY
+
+- **Run the two preset scenarios** — select "Infection Cleared" then Setup and Go, observe the outcome. Then try "Immune System Collapse" and compare how quickly the immune system fails.
+- **Raise the levenshtein-similarity-threshold slider** — setting it very high (above 80) makes the immune system extremely strict. Bacteria with only moderate mimicry still get attacked.
+- **Lower the threshold** — setting it very low (below 40) makes the immune system extremely lenient. Even slightly foreign bacteria get ignored. Watch how quickly bacteria overrun the tissue.
+- **Raise Bacteria-Spread-Chance% to maximum** — gives bacteria an overwhelming initial advantage. Can the immune system evolve fast enough to catch up?
+- **Set Macrophage-Eat-Capacity-G to 1** — macrophages die after eating only one bacterium. Observe how this weakens the first wave immune response and whether neutrophils can compensate.
+- **Set Neutrophil-Damage-Radius-T to maximum** — neutrophils cause massive collateral tissue damage. Watch how friendly fire can destroy healthy tissue faster than bacteria do.
+- **Run for many generations** — let the simulation run to generation 50 or beyond and watch the genome monitor panels.
+
+# EXTENDING THE MODEL
+
+- **Add adaptive immunity** — introduce T-cells and B-cells that remember previous bacterial genomes and respond faster on re-infection. This would model immune memory, a major biological phenomenon not currently in the simulation.
+- **Add Natural Killer cells** — agents that attack any cell not displaying the correct body-genome marker, regardless of pheromone signals. This would add a third immune wave independent of the macrophage-neutrophil pipeline.
+- **Multiple body-genome strains** — instead of one body-genome, have different tissue regions with different genomes. Bacteria would need to evolve different mimicry strategies for different zones.
+- **Antibiotic intervention** — add a slider that periodically kills a percentage of bacteria regardless of mimicry score, modelling antibiotic treatment. Explore how antibiotic-resistant strains emerge when the kill rate is too low.
+- **Variable genome length** — allow bacteria genomes to grow or shrink through insertions and deletions during mutation, making the Levenshtein distance calculation more meaningful and the similarity score harder to achieve.
+- **Visualise pheromone gradients** — colour patches based on current p1 and p2 pheromone trails so that the chemical signalling are visible in our gui.
+
+
 
 ## CREDITS AND REFERENCES
 
-(a reference to the model's URL on the web if it has one, as well as any other necessary credits, citations, and links)
-</info>
+Created by Khadeeja Abbas, Mahira Zabin, and Maira Khan
+Department of Computer Science, University of Calgary
+CPSC 565 — Emergent Computing, 2025
+
+Biological inspiration:
+- Kurzgesagt – In a Nutshell: "How the immune system actually works" (2021). https://youtu.be/lXfEK8G8CUIsi=QR1zDlNTL_yALdHl
+- National Library of Medicine: "In brief: The innate and adaptive immune system." https://www.ncbi.nlm.nih.gov/books/NBK279396/
+- World Health Organization: Tuberculosis fact sheet (2024). https://www.who.int/news-room/fact-sheets/detail/tuberculosis
+]]></info>
   <turtleShapes>
     <shape name="default" rotatable="true" editableColorIndex="0">
       <polygon color="-1920102913" filled="true" marked="true">

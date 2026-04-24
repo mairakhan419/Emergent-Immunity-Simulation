@@ -32,7 +32,6 @@ end
 to-report mutationFunction [cellGenome mutationRate]
   ; How to use: pass genome string and rate e.g. 0.05 for 5% per character
   ; each character independently has mutationRate chance of being replaced
-  ; replacement is always a DIFFERENT base than the current one
   let newGenome ""
   let genomeLength length cellGenome
 

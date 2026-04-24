@@ -56,9 +56,9 @@ to bacteria-spread
     let empty-neighbour one-of neighbors with [not any? bacteria-on self]
     if empty-neighbour != nobody [
       ask empty-neighbour [
-        ; we are now in PATCH context — use saved local variables only
+        ; we are now in patch context — use saved local variables only
         sprout-bacteria 1 [
-          ; now in new BACTERIUM context — set genome first
+          ; now in bactareia context — set genome first
           set genome parent-genome
           set similarity-to-body parent-similarity
           set ticks-survived 0
@@ -77,13 +77,16 @@ to bacteria-eat
   if [healthy?] of patch-here [
     ask patch-here [ set eaten? true ]
   ]
+  
+  ; fitness mirrors the formula used in evolve-bacteria                           
+  let my-fitness ticks-survived + (times-fooled * 2) + (similarity-to-body * 10)
+  if my-fitness > best-bacteria-fitness-ever [
+    set best-bacteria-fitness-ever my-fitness
+    set best-bacteria-genome-ever genome
+  ]  
 end
 
 ; ---- updates colour to reflect how similar this bacterium's genome is to body-genome ----
-; FIX: original code used integer thresholds (15, 25, 45) against a 0-1 score
-; corrected to use fractional thresholds that actually match the similarity range
-; also FIX: similarity-to-body is now updated here each tick so immune cells
-; always read the current value rather than a stale cached value
 to bacteria-update-colour
   ; recalculate and cache similarity each tick
   set similarity-to-body genome-similarity genome body-genome
@@ -106,9 +109,7 @@ to bacteria-update-colour
 end
 
 ; ---- reporters ----
-
 ; report the highest similarity score among all live bacteria
-; useful for tracking how far along mimicry evolution has progressed
 to-report best-bacteria
   ifelse any? bacteria [
     report max [similarity-to-body] of bacteria
@@ -117,9 +118,7 @@ to-report best-bacteria
   ]
 end
 
-; FIX: original version called an undefined reporter lvenchisten-function
-; now correctly returns the mean similarity-to-body across all live bacteria
-; normalised to 0-1 range matching genome-similarity output
+
 to-report report-levenshtein-distance
   ifelse any? bacteria [
     report mean [similarity-to-body] of bacteria

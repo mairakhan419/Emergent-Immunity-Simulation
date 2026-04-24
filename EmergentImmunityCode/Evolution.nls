@@ -3,53 +3,27 @@
 ; creates offspring through recombination (immune cells) or mutation (bacteria),
 ; then replaces the entire old population with the new evolved generation
 
-; ---- saves the best current genomes without killing any agents ----
+
 ; called once at setup to seed the genome globals before the first evolution cycle
 to seed-generation-records
-  if any? macrophages [
-    let best1 max-one-of macrophages [eat-count + (ticks-survived * 0.1)]
-    set last-fittest-macrophage-genome-1 [genome] of best1
-
-    let remaining-macrophages macrophages with [self != best1]
-    ifelse any? remaining-macrophages [
-      let best2 max-one-of remaining-macrophages [eat-count + (ticks-survived * 0.1)]
-      set last-fittest-macrophage-genome-2 [genome] of best2
-    ] [
-      ; only one macrophage exists — use same genome for both parents
-      set last-fittest-macrophage-genome-2 last-fittest-macrophage-genome-1
-    ]
-  ]
-
-  if any? neutrophils [
-    let best1 max-one-of neutrophils [bacteria-killed - (friendly-fire * 0.5)]
-    set last-fittest-neutrophil-genome-1 [genome] of best1
-
-    let remaining-neutrophils neutrophils with [self != best1]
-    ifelse any? remaining-neutrophils [
-      let best2 max-one-of remaining-neutrophils [bacteria-killed - (friendly-fire * 0.5)]
-      set last-fittest-neutrophil-genome-2 [genome] of best2
-    ] [
-      set last-fittest-neutrophil-genome-2 last-fittest-neutrophil-genome-1
-    ]
-  ]
-
-  if any? bacteria [
-    ; bacteria use asexual reproduction so only one parent genome is needed
-    ; EDIT: added similarity-to-body * 10 so selection pressure favours bacteria
-    ; that are already close to body-genome, giving evolution a direction to climb
-    let fittest max-one-of bacteria [ticks-survived + (times-fooled * 2) + (similarity-to-body * 10)]
-    set last-fittest-bacteria-genome [genome] of fittest
-  ]
+  ; at tick 0 all fitness scores are 0 so just seed with random genomes
+  ; these will be replaced at tick 50 with genuinely fit genomes
+  set last-fittest-macrophage-genome-1 randomGenomeFunction
+  set last-fittest-macrophage-genome-2 randomGenomeFunction
+  set last-fittest-neutrophil-genome-1 randomGenomeFunction
+  set last-fittest-neutrophil-genome-2 randomGenomeFunction
+  set last-fittest-bacteria-genome randomGenomeFunction
 end
 
 ; ---- MACROPHAGE EVOLUTION ----
-; fitness = eat-count + 0.1 * ticks-survived
+; fitness = eat-count * 5 + 0.1 * ticks-survived
 ; rewards macrophages that ate many bacteria AND survived long
 ; two parents are selected, their genomes are recombined, then mutated
 to evolve-macrophages
-  ; save the two best macrophage genomes before the population is killed
+  ; select two best live parents and record their fitness for hall of fame comparison
   if any? macrophages [
     let parent1 max-one-of macrophages [(eat-count * 5) + (ticks-survived * 0.1)]
+    let live-best-fitness [(eat-count * 5) + (ticks-survived * 0.1)] of parent1  ; reuse parent1 instead of recalculating
     set last-fittest-macrophage-genome-1 [genome] of parent1
 
     let remaining macrophages with [self != parent1]
@@ -59,9 +33,17 @@ to evolve-macrophages
     ] [
       set last-fittest-macrophage-genome-2 last-fittest-macrophage-genome-1
     ]
+
+    ; compare dead agents against live best — now using already-calculated live-best-fitness
+    if best-macrophage-genome-ever-1 != "" and best-macrophage-fitness-ever-1 > live-best-fitness [
+      set last-fittest-macrophage-genome-1 best-macrophage-genome-ever-1
+    ]
+    if best-macrophage-genome-ever-2 != "" and best-macrophage-fitness-ever-2 > live-best-fitness [
+      set last-fittest-macrophage-genome-2 best-macrophage-genome-ever-2
+    ]
   ]
 
-  ; fallback: if no genome was ever recorded, generate a random one
+  ; fallback if no live macrophages existed
   if last-fittest-macrophage-genome-1 = "" [
     set last-fittest-macrophage-genome-1 randomGenomeFunction
   ]
@@ -69,19 +51,21 @@ to evolve-macrophages
     set last-fittest-macrophage-genome-2 last-fittest-macrophage-genome-1
   ]
 
-  ; create offspring genome via crossover then mutation
+  ; reset for next generation
+  set best-macrophage-fitness-ever-1 0
+  set best-macrophage-genome-ever-1 ""
+  set best-macrophage-fitness-ever-2 0
+  set best-macrophage-genome-ever-2 ""
+
   let new-genome recombinationFunction last-fittest-macrophage-genome-1 last-fittest-macrophage-genome-2
   set new-genome mutationFunction new-genome (mutation-rate% / 100)
 
-  ; kill entire old generation
   ask macrophages [ die ]
 
-  ; spawn a fresh batch using the evolved genome
   let room max (list 0 (max-macrophages - count macrophages))
   create-macrophages min (list macrophage-spawn-rate room) [
     initialise-macrophage
     set genome new-genome
-    ; re-derive phenotype traits from the new evolved genome
     set sensitivity length filter [c -> c = "A"] (n-values (length genome) [i -> substring genome i (i + 1)])
     set max-eat     length filter [c -> c = "G"] (n-values (length genome) [i -> substring genome i (i + 1)])
     if max-eat < 1 [ set max-eat 1 ]
@@ -89,11 +73,12 @@ to evolve-macrophages
 end
 
 ; ---- NEUTROPHIL EVOLUTION ----
-; fitness = bacteria-killed - 0.5 * friendly-fire
+; fitness = bacteria-killed * 5  - 0.5 * friendly-fire
 ; rewards neutrophils that killed many bacteria but penalises collateral tissue damage
 to evolve-neutrophils
   if any? neutrophils [
     let parent1 max-one-of neutrophils [(bacteria-killed * 5) - (friendly-fire * 0.5)]
+    let live-best-fitness [(bacteria-killed * 5) - (friendly-fire * 0.5)] of parent1  ; reuse parent1
     set last-fittest-neutrophil-genome-1 [genome] of parent1
 
     let remaining neutrophils with [self != parent1]
@@ -102,6 +87,14 @@ to evolve-neutrophils
       set last-fittest-neutrophil-genome-2 [genome] of parent2
     ] [
       set last-fittest-neutrophil-genome-2 last-fittest-neutrophil-genome-1
+    ]
+
+    ;  comparison using already-calculated live-best-fitness
+    if best-neutrophil-genome-ever-1 != "" and best-neutrophil-fitness-ever-1 > live-best-fitness [
+      set last-fittest-neutrophil-genome-1 best-neutrophil-genome-ever-1
+    ]
+    if best-neutrophil-genome-ever-2 != "" and best-neutrophil-fitness-ever-2 > live-best-fitness [
+      set last-fittest-neutrophil-genome-2 best-neutrophil-genome-ever-2
     ]
   ]
 
@@ -112,6 +105,12 @@ to evolve-neutrophils
     set last-fittest-neutrophil-genome-2 last-fittest-neutrophil-genome-1
   ]
 
+  ; reset  for next generation
+  set best-neutrophil-fitness-ever-1 0
+  set best-neutrophil-genome-ever-1 ""
+  set best-neutrophil-fitness-ever-2 0
+  set best-neutrophil-genome-ever-2 ""
+
   let new-genome recombinationFunction last-fittest-neutrophil-genome-1 last-fittest-neutrophil-genome-2
   set new-genome mutationFunction new-genome (mutation-rate% / 100)
 
@@ -121,7 +120,6 @@ to evolve-neutrophils
   create-neutrophils min (list neutrophil-spawn-rate room) [
     initialise-neutrophil
     set genome new-genome
-    ; re-derive phenotype traits from the new evolved genome
     set sensitivity   length filter [c -> c = "C"] (n-values (length genome) [i -> substring genome i (i + 1)])
     set damage-radius length filter [c -> c = "T"] (n-values (length genome) [i -> substring genome i (i + 1)])
     if damage-radius < 1 [ set damage-radius 1 ]
@@ -134,7 +132,7 @@ end
 ; bacteria reproduce asexually — one parent, directed mutation only, no recombination
 to evolve-bacteria
   if any? bacteria [
-    ; EDIT: added similarity-to-body * 10 to fitness so the bacterium chosen as
+    ; added similarity-to-body * 10 to fitness so the bacteria chosen as
     ; parent is the one already closest to body-genome, giving evolution a direction
     let fittest max-one-of bacteria [ticks-survived + (times-fooled * 2) + (similarity-to-body * 10)]
     set last-fittest-bacteria-genome [genome] of fittest
@@ -143,18 +141,30 @@ to evolve-bacteria
   if last-fittest-bacteria-genome = "" [
     set last-fittest-bacteria-genome randomGenomeFunction
   ]
+  
+  ;  if a dead bacterium scored better than any survivor, use it 
+  if best-bacteria-genome-ever != "" [
+    let live-best-fitness 0
+    if any? bacteria [
+      set live-best-fitness max [ticks-survived + (times-fooled * 2) + (similarity-to-body * 10)] of bacteria
+    ]
+    if best-bacteria-fitness-ever > live-best-fitness [
+      set last-fittest-bacteria-genome best-bacteria-genome-ever
+    ]
+  ]
 
+  ; reset for next generation
+  set best-bacteria-fitness-ever 0
+  set best-bacteria-genome-ever "" 
+  
+  
   ; save parent genome before wiping the population
-  ; must be saved here or it is lost when ask bacteria [die] runs
   let parent-genome last-fittest-bacteria-genome
 
   ask bacteria [ die ]
 
-  ; EDIT: switched from mutationFunction to directedMutationFunction
   ; directedMutationFunction nudges each character toward the matching body-genome base
-  ; so bacteria actively climb toward mimicry each generation instead of random walking
-  ; EDIT: dividing by 1000 instead of 100 slows the climb so it is visible on the graph
-  ; at mutation-rate% = 59 this gives ~5.9% directed nudge per character per generation
+  ; so bacteria actively climb toward mimicry each generation
   create-bacteria min (list initial-bacteria-count max-bacteria) [
     set genome directedMutationFunction parent-genome body-genome (mutation-rate% / 1000)
     set similarity-to-body genome-similarity genome body-genome

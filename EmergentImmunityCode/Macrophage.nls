@@ -53,13 +53,12 @@ to initialise-macrophage
   ; count Gs in genome to set max-eat capacity
   set max-eat length filter [c -> c = "G"] (n-values (length genome) [i -> substring genome i (i + 1)])
 
-  ; FIX: guard against max-eat = 0 which caused macrophages to die instantly on spawn
+  ; guard against max-eat = 0 from slider input 
   if max-eat < 1 [ set max-eat 1 ]
 
   set eat-count 0
   set ticks-survived 0
 
-  ; macrophage appearance — rounded blob shape like a real macrophage cell body
   set shape "macrophage-cell-image"
   set color violet
   set size 1.4
@@ -140,7 +139,6 @@ to macrophage-eat [similarity-threshold]
 
     ; check if bacteria genome looks too similar to body-genome
     ; if so macrophage mistakes it for healthy tissue and leaves it alone
-    ; this is the molecular mimicry mechanic
     let similarity [similarity-to-body] of target
 
     ifelse similarity < similarity-threshold [
@@ -158,12 +156,29 @@ to macrophage-eat [similarity-threshold]
   ]
 
   ; die of exhaustion once eat-count reaches max-eat
-  if eat-count >= max-eat [ die ]
+  if eat-count >= max-eat [ 
+    ; ---- record top TWO macrophages before dying ----
+    let my-fitness (eat-count * 5) + (ticks-survived * 0.1)    
+
+    ifelse my-fitness > best-macrophage-fitness-ever-1 [
+      ; this macrophage beats the current best — bump 1 down to 2, save this as 1
+      set best-macrophage-fitness-ever-2 best-macrophage-fitness-ever-1
+      set best-macrophage-genome-ever-2 best-macrophage-genome-ever-1
+      set best-macrophage-fitness-ever-1 my-fitness
+      set best-macrophage-genome-ever-1 genome
+    ] [
+      ; not better than 1 — check if it beats 2nd place
+      if my-fitness > best-macrophage-fitness-ever-2 [
+        set best-macrophage-fitness-ever-2 my-fitness
+        set best-macrophage-genome-ever-2 genome
+      ]
+    ]     
+    
+    die 
+  ]
 end
 
 ; ---- GUI reporters: sorted genomes for interface monitor boxes ----
-; wire gui-top-macrophage-genome-1 and -2 to the monitor widgets in the interface
-
 to-report sorted-macrophage-genome-1
   let g last-fittest-macrophage-genome-1
   if not is-string? g or length g = 0 [ report "—" ]
