@@ -25,7 +25,7 @@ to setup-bacteria
     set similarity-to-body genome-similarity genome body-genome
     set ticks-survived 0
     set times-fooled 0
-    set shape "bug"   ; looks like a real microbe — visually distinct from immune cells
+    set shape "monster"   ; looks like a real microbe — visually distinct from immune cells
     set color red
     set size 1.2
     move-to one-of patches with [healthy?]
@@ -63,7 +63,7 @@ to bacteria-spread
           set similarity-to-body parent-similarity
           set ticks-survived 0
           set times-fooled 0
-          set shape "bug"
+          set shape "monster"
           set color red
           set size 1.2
         ]

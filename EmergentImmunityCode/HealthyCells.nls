@@ -79,4 +79,26 @@ to update-healthy-cells
       set pcolor white   ; empty or eaten patch
     ]
   ]
+  ;re-generate healthy cells every 5 ticks 
+  if ticks mod 10 = 0 [
+    let dead-patches patches with [
+      not healthy? and
+      not any? bacteria-on self and
+      not any? macrophages-on self and
+      not any? neutrophils-on self
+    ]
+    ; restore a very small number of cells — just enough to slow collapse
+    let small-respawn round (count patches * (initial-healthy-cells-count / 100) * 0.02)
+    let actual min (list small-respawn count dead-patches)
+    if actual > 0 [
+      ask n-of actual dead-patches [
+        set healthy? true
+        set eaten? false
+        set pheromone 0
+        set pcolor green
+      ]
+    ]
+  ]
+  
+  
 end

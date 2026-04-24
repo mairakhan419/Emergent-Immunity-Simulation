@@ -49,12 +49,12 @@ end
 to evolve-macrophages
   ; save the two best macrophage genomes before the population is killed
   if any? macrophages [
-    let parent1 max-one-of macrophages [eat-count + (ticks-survived * 0.1)]
+    let parent1 max-one-of macrophages [(eat-count * 5) + (ticks-survived * 0.1)]
     set last-fittest-macrophage-genome-1 [genome] of parent1
 
     let remaining macrophages with [self != parent1]
     ifelse any? remaining [
-      let parent2 max-one-of remaining [eat-count + (ticks-survived * 0.1)]
+      let parent2 max-one-of remaining [(eat-count * 5) + (ticks-survived * 0.1)]
       set last-fittest-macrophage-genome-2 [genome] of parent2
     ] [
       set last-fittest-macrophage-genome-2 last-fittest-macrophage-genome-1
@@ -93,12 +93,12 @@ end
 ; rewards neutrophils that killed many bacteria but penalises collateral tissue damage
 to evolve-neutrophils
   if any? neutrophils [
-    let parent1 max-one-of neutrophils [bacteria-killed - (friendly-fire * 0.5)]
+    let parent1 max-one-of neutrophils [(bacteria-killed * 5) - (friendly-fire * 0.5)]
     set last-fittest-neutrophil-genome-1 [genome] of parent1
 
     let remaining neutrophils with [self != parent1]
     ifelse any? remaining [
-      let parent2 max-one-of remaining [bacteria-killed - (friendly-fire * 0.5)]
+      let parent2 max-one-of remaining [(bacteria-killed * 5) - (friendly-fire * 0.5)]
       set last-fittest-neutrophil-genome-2 [genome] of parent2
     ] [
       set last-fittest-neutrophil-genome-2 last-fittest-neutrophil-genome-1
@@ -160,7 +160,7 @@ to evolve-bacteria
     set similarity-to-body genome-similarity genome body-genome
     set ticks-survived 0
     set times-fooled 0
-    set shape "bug"
+    set shape "monster"
     set color red
     set size 1.2
     let start-patch one-of patches with [healthy?]

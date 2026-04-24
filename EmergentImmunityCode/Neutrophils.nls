@@ -58,7 +58,7 @@ to initialise-neutrophil
   set friendly-fire 0
 
   ; neutrophil appearance — bug shape in cyan to distinguish from red/orange bacteria
-  set shape "bug"
+  set shape "neutrophil-cell-image"
   set color cyan
   set size 1.3
 
@@ -72,19 +72,30 @@ to initialise-neutrophil
   ]
 end
 
-; ---- runs every tick to update all neutrophil behaviour ----
 to update-neutrophils
-  ; spawn new neutrophils up to the population cap each tick
+  ; only recruit neutrophils if macrophages have been active
+  ; (p2 pheromone present means macrophages found and ate bacteria)
+  let total-p2 sum [macrophages-pheromone] of patches
   let room max (list 0 (max-neutrophils - count neutrophils))
-  if room > 0 [
-    create-neutrophils min (list neutrophil-spawn-rate room) [
-      initialise-neutrophil
+
+  if room > 0 and total-p2 > 10 [  ; only spawn if p2 signal is strong enough
+    ifelse last-fittest-neutrophil-genome-1 != "" [
+      let spawn-genome last-fittest-neutrophil-genome-1
+      create-neutrophils min (list neutrophil-spawn-rate room) [
+        initialise-neutrophil
+        set genome spawn-genome
+        set sensitivity   length filter [c -> c = "C"] (n-values (length genome) [i -> substring genome i (i + 1)])
+        set damage-radius length filter [c -> c = "T"] (n-values (length genome) [i -> substring genome i (i + 1)])
+        if damage-radius < 1 [ set damage-radius 1 ]
+      ]
+    ] [
+      create-neutrophils min (list neutrophil-spawn-rate room) [
+        initialise-neutrophil
+      ]
     ]
   ]
 
-  ; convert levenshtein slider to 0-1 threshold
   let similarity-threshold (levenshtein-similarity-threshold / 100)
-
   ask neutrophils [
     neutrophil-move
     neutrophil-attack similarity-threshold

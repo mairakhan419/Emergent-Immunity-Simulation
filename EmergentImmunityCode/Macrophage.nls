@@ -60,7 +60,7 @@ to initialise-macrophage
   set ticks-survived 0
 
   ; macrophage appearance — rounded blob shape like a real macrophage cell body
-  set shape "circle 2"
+  set shape "macrophage-cell-image"
   set color violet
   set size 1.4
 
@@ -80,8 +80,20 @@ to update-macrophages
   ; mimics continuous production of new immune cells in the body
   let room max (list 0 (max-macrophages - count macrophages))
   if room > 0 [
-    create-macrophages min (list macrophage-spawn-rate room) [
-      initialise-macrophage
+    ; use the last evolved genome if one exists, otherwise fall back to initialise-macrophage
+    ifelse last-fittest-macrophage-genome-1 != "" [
+      let spawn-genome last-fittest-macrophage-genome-1
+      create-macrophages min (list macrophage-spawn-rate room) [
+        initialise-macrophage
+        set genome spawn-genome
+        set sensitivity length filter [c -> c = "A"] (n-values (length genome) [i -> substring genome i (i + 1)])
+        set max-eat     length filter [c -> c = "G"] (n-values (length genome) [i -> substring genome i (i + 1)])
+        if max-eat < 1 [ set max-eat 1 ]
+      ]
+    ] [
+      create-macrophages min (list macrophage-spawn-rate room) [
+        initialise-macrophage
+      ]
     ]
   ]
 

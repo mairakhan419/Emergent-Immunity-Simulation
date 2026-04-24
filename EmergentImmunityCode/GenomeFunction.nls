@@ -20,7 +20,7 @@ to-report recombinationFunction [p1 p2]
   ; a random crossover point k is chosen
   ; offspring = first k chars of p1 + remaining chars of p2
   ; this mixes traits from both fit parents
-  let cutoff random (length p1)
+  let cutoff 1 + random (length p1 - 1)
   report word
     (substring p1 0 cutoff)
     (substring p2 cutoff length p2)
@@ -161,11 +161,7 @@ to-report directedMutationFunction [cellGenome targetGenome mutationRate]
     ifelse random-float 1 < mutationRate [
       set newGenome word newGenome targetBase
     ] [
-      ifelse random-float 1 < (mutationRate / 2) [
-        set newGenome word newGenome one-of remove currentBase bases
-      ] [
-        set newGenome word newGenome currentBase
-      ]
+      set newGenome word newGenome currentBase
     ]
   ]
   report newGenome

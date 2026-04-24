@@ -51,7 +51,7 @@ to setup
   set last-fittest-bacteria-genome ""
 
   ; keep breed sizes bounded so later ticks do not become dramatically slower
-  set max-bacteria    min (list (count patches) (max (list 150 (initial-bacteria-count * 10))))
+  set max-bacteria    min (list (count patches) (max (list 150 (initial-bacteria-count * 30))))
   set max-macrophages min (list (count patches) (max (list 40  (macrophage-spawn-rate * 20))))
   set max-neutrophils min (list (count patches) (max (list 30  (neutrophil-spawn-rate * 20))))
 
@@ -243,48 +243,12 @@ end]]></code>
     <monitor x="1080" precision="17" y="45" height="60" fontSize="10" display="Top 2 Macrophage Genome" width="160" sizeVersion="0">gui-top-macrophage-genome-2</monitor>
     <monitor x="915" precision="17" y="110" height="60" fontSize="10" display="Top 1 Neutrophil Genome " width="160" sizeVersion="0">gui-top-neutrophil-genome-1</monitor>
     <monitor x="1080" precision="17" y="110" height="60" fontSize="10" display="Top 2 Neutrophil Genome " width="160" sizeVersion="0">gui-top-neutrophil-genome-2</monitor>
-    <plot x="915" autoPlotX="true" yMax="10.0" autoPlotY="true" y="250" xMin="0.0" height="160" legend="false" xMax="10.0" yMin="0.0" display="Immune Cell Activity" width="225" sizeVersion="0">
-      <setup></setup>
-      <update></update>
-      <pen interval="1.0" mode="0" display="default" color="-8630108" legend="true">
-        <setup></setup>
-        <update>plot count macrophages</update>
-      </pen>
-      <pen interval="1.0" mode="0" display="pen-1" color="-14070903" legend="true">
-        <setup></setup>
-        <update>plot count neutrophils</update>
-      </pen>
-    </plot>
-    <plot x="915" autoPlotX="false" yMax="1.0" autoPlotY="false" y="420" xMin="0.0" height="160" legend="false" xMax="1.0" yMin="0.0" display="Genome Fitness (avg)" width="225" sizeVersion="0">
-      <setup></setup>
-      <update></update>
-      <pen interval="1.0" mode="0" display="default" color="-2674135" legend="true">
-        <setup></setup>
-        <update>plot best-bacteria</update>
-      </pen>
-      <pen interval="1.0" mode="0" display="pen-1" color="-13840069" legend="true">
-        <setup></setup>
-        <update>plot (levenshtein-similarity-threshold / 100)</update>
-      </pen>
-    </plot>
     <monitor x="915" precision="17" y="45" height="60" fontSize="10" display="Top 1 Macrophage Genome" width="160" sizeVersion="0">gui-top-macrophage-genome-1</monitor>
-    <note x="900" y="565" backgroundDark="0" fontSize="11" width="250" markdown="true" height="41" textColorDark="-15302303" textColorLight="-15302303" backgroundLight="0">------------------- LIVE COUNTS -----------------</note>
-    <monitor x="1030" precision="17" y="610" height="60" fontSize="10" display="bacteria" width="110" sizeVersion="0">bacteria-count</monitor>
     <monitor x="915" precision="17" y="675" height="60" fontSize="10" display="macrophage cells" width="110" sizeVersion="0">macrophage-count</monitor>
     <monitor x="1030" precision="17" y="675" height="60" fontSize="10" display="neutrophils cells" width="110" sizeVersion="0">neutrophil-count</monitor>
-    <monitor x="915" precision="17" y="740" height="60" fontSize="10" display="dead cells" width="110" sizeVersion="0">dead-cell-count</monitor>
     <monitor x="1030" precision="17" y="740" height="60" fontSize="10" display="generation" width="110" sizeVersion="0">generation-number</monitor>
-    <monitor x="915" precision="17" y="180" height="60" fontSize="10" display="Top Bacteria Genome" width="160" sizeVersion="0">gui-top-bacteria-genome</monitor>
-    <plot x="1150" autoPlotX="true" yMax="10.0" autoPlotY="true" y="320" xMin="0.0" height="160" legend="false" xMax="10.0" yMin="0.0" display="Bacteria Population Over Time" width="225" sizeVersion="0">
-      <setup></setup>
-      <update></update>
-      <pen interval="1.0" mode="0" display="default" color="-2674135" legend="true">
-        <setup></setup>
-        <update>plot count bacteria</update>
-      </pen>
-    </plot>
-    <slider x="5" step="1" y="245" max="100" width="250" display="Bacteria-Spread-Chance%" height="50" min="0" direction="Horizontal" default="35.0" variable="Bacteria-Spread-Chance%"></slider>
-    <slider x="5" step="1" y="190" max="100" width="250" display="Initial-Bacteria-Count" height="50" min="0" direction="Horizontal" default="36.0" variable="Initial-Bacteria-Count"></slider>
+    <slider x="5" step="1" y="245" max="100" width="250" display="Bacteria-Spread-Chance%" height="50" min="0" direction="Horizontal" default="22.0" variable="Bacteria-Spread-Chance%"></slider>
+    <slider x="5" step="1" y="190" max="100" width="250" display="Initial-Bacteria-Count" height="50" min="0" direction="Horizontal" default="34.0" variable="Initial-Bacteria-Count"></slider>
     <chooser x="10" y="5" height="60" variable="Simulation-Model" current="2" width="250" display="Simulation-Model">
       <choice type="string" value="Immune System Collapse"></choice>
       <choice type="string" value="Infection Cleared"></choice>
@@ -294,19 +258,55 @@ end]]></code>
     <button x="90" y="70" height="40" disableUntilTicks="false" forever="false" kind="Observer" width="85" display="Go Once"></button>
     <button x="180" y="70" height="40" disableUntilTicks="false" forever="true" kind="Observer" width="80" display="Go ">go</button>
     <note x="5" y="100" backgroundDark="0" fontSize="11" width="250" markdown="true" height="40" textColorDark="-15302303" textColorLight="-15302303" backgroundLight="0">---------------- POPULATION ----------------</note>
-    <slider x="5" step="1" y="135" max="100" width="250" display="Initial-Healthy-Cells-Count" height="50" min="0" direction="Horizontal" default="37.0" variable="Initial-Healthy-Cells-Count"></slider>
-    <monitor x="915" precision="17" y="610" height="60" fontSize="10" display="healthy cells" width="110" sizeVersion="0">healthy-cell-count</monitor>
-    <slider x="5" step="1" y="760" max="100" width="250" display="levenshtein-similarity-threshold" height="50" min="0" direction="Horizontal" default="93.0" variable="levenshtein-similarity-threshold"></slider>
-    <slider x="5" step="1" y="705" max="100" width="250" display="Mutation-Rate%" height="50" min="0" direction="Horizontal" default="35.0" variable="Mutation-Rate%"></slider>
+    <slider x="5" step="1" y="135" max="100" width="250" display="Initial-Healthy-Cells-Count" height="50" min="0" direction="Horizontal" default="15.0" variable="Initial-Healthy-Cells-Count"></slider>
+    <slider x="5" step="1" y="760" max="100" width="250" display="levenshtein-similarity-threshold" height="50" min="0" direction="Horizontal" default="25.0" variable="levenshtein-similarity-threshold"></slider>
+    <slider x="5" step="1" y="705" max="100" width="250" display="Mutation-Rate%" height="50" min="0" direction="Horizontal" default="70.0" variable="Mutation-Rate%"></slider>
     <note x="10" y="665" backgroundDark="0" fontSize="11" width="250" markdown="true" height="35" textColorDark="-15302303" textColorLight="-15302303" backgroundLight="0">---------------- EVOLUTION ----------------</note>
-    <slider x="5" step="1" y="615" max="16" width="250" display="Neutrophil-Spawn-Rate" height="50" min="0" direction="Horizontal" default="2.0" variable="Neutrophil-Spawn-Rate"></slider>
+    <slider x="5" step="1" y="615" max="16" width="250" display="Neutrophil-Spawn-Rate" height="50" min="0" direction="Horizontal" default="1.0" variable="Neutrophil-Spawn-Rate"></slider>
     <slider x="5" step="1" y="565" max="16" width="250" display="Neutrophil-Damage-Radius-T" height="50" min="0" direction="Horizontal" default="1.0" variable="Neutrophil-Damage-Radius-T"></slider>
     <slider x="5" step="1" y="515" max="16" width="250" display="Neutrophil-Sensitivity-C" height="50" min="0" direction="Horizontal" default="1.0" variable="Neutrophil-Sensitivity-C"></slider>
     <note x="5" y="470" backgroundDark="0" fontSize="11" width="250" markdown="true" height="41" textColorDark="-15302303" textColorLight="-15302303" backgroundLight="0">---------- NEUTROPHIL BEHAVIOUR ---------</note>
-    <slider x="5" step="1" y="430" max="100" width="250" display="Macrophage-Spawn-Rate" height="50" min="0" direction="Horizontal" default="3.0" variable="Macrophage-Spawn-Rate"></slider>
+    <slider x="5" step="1" y="430" max="100" width="250" display="Macrophage-Spawn-Rate" height="50" min="0" direction="Horizontal" default="2.0" variable="Macrophage-Spawn-Rate"></slider>
     <slider x="5" step="1" y="375" max="16" width="250" display="Macrophage-Eat-Capacity-G" height="50" min="0" direction="Horizontal" default="2.0" variable="Macrophage-Eat-Capacity-G"></slider>
-    <slider x="5" step="1" y="320" max="16" width="250" display="Macrophage-Sensitivity-A" height="50" min="0" direction="Horizontal" default="1.0" variable="Macrophage-Sensitivity-A"></slider>
+    <slider x="5" step="1" y="320" max="16" width="250" display="Macrophage-Sensitivity-A" height="50" min="0" direction="Horizontal" default="2.0" variable="Macrophage-Sensitivity-A"></slider>
     <note x="0" y="285" backgroundDark="0" fontSize="11" width="250" markdown="true" height="41" textColorDark="-15302303" textColorLight="-15302303" backgroundLight="0">---------- MACROPHAGE BEHAVIOUR ---------</note>
+    <plot x="1150" autoPlotX="false" yMax="1.0" autoPlotY="false" y="290" xMin="0.0" height="240" legend="true" xMax="500.0" yMin="0.0" display="Genome Fitness" width="225" sizeVersion="0">
+      <setup></setup>
+      <update></update>
+      <pen interval="1.0" mode="0" display="bacteria genome" color="-2674135" legend="true">
+        <setup></setup>
+        <update>plot best-bacteria</update>
+      </pen>
+      <pen interval="1.0" mode="0" display="similarity threshold" color="-13840069" legend="true">
+        <setup></setup>
+        <update>plot (levenshtein-similarity-threshold / 100)</update>
+      </pen>
+    </plot>
+    <monitor x="915" precision="17" y="740" height="60" fontSize="10" display="dead cells" width="110" sizeVersion="0">dead-cell-count</monitor>
+    <monitor x="1145" precision="17" y="675" height="60" fontSize="10" display="bacteria" width="110" sizeVersion="0">bacteria-count</monitor>
+    <monitor x="1150" precision="17" y="740" height="60" fontSize="10" display="healthy cells" width="110" sizeVersion="0">healthy-cell-count</monitor>
+    <monitor x="915" precision="17" y="175" height="60" fontSize="10" display="Top Bacteria Genome" width="160" sizeVersion="0">gui-top-bacteria-genome</monitor>
+    <plot x="910" autoPlotX="true" yMax="10.0" autoPlotY="true" y="475" xMin="0.0" height="160" legend="false" xMax="10.0" yMin="0.0" display="Bacteria Population Over Time" width="235" sizeVersion="0">
+      <setup></setup>
+      <update></update>
+      <pen interval="1.0" mode="0" display="default" color="-2674135" legend="true">
+        <setup></setup>
+        <update>plot count bacteria</update>
+      </pen>
+    </plot>
+    <plot x="910" autoPlotX="true" yMax="10.0" autoPlotY="true" y="240" xMin="0.0" height="230" legend="true" xMax="10.0" yMin="0.0" display="Immune Cell Activity" width="235" sizeVersion="0">
+      <setup></setup>
+      <update></update>
+      <pen interval="1.0" mode="0" display="count of macrophages" color="-8630108" legend="true">
+        <setup></setup>
+        <update>plot count macrophages</update>
+      </pen>
+      <pen interval="1.0" mode="0" display="count of neutrophils" color="-14070903" legend="true">
+        <setup></setup>
+        <update>plot count neutrophils</update>
+      </pen>
+    </plot>
+    <note x="910" y="625" backgroundDark="0" fontSize="11" width="250" markdown="true" height="41" textColorDark="-15302303" textColorLight="-15302303" backgroundLight="0">------------------- LIVE COUNTS -----------------</note>
   </widgets>
   <info>## WHAT IS IT?
 
@@ -564,6 +564,29 @@ end]]></code>
     <shape name="dot" rotatable="false" editableColorIndex="0">
       <circle x="90" y="90" marked="true" color="-1920102913" diameter="120" filled="true"></circle>
     </shape>
+    <shape name="drop" rotatable="false" editableColorIndex="0">
+      <circle x="73" y="133" marked="true" color="-1920102913" diameter="152" filled="true"></circle>
+      <polygon color="-1920102913" filled="true" marked="true">
+        <point x="219" y="181"></point>
+        <point x="205" y="152"></point>
+        <point x="185" y="120"></point>
+        <point x="174" y="95"></point>
+        <point x="163" y="64"></point>
+        <point x="156" y="37"></point>
+        <point x="149" y="7"></point>
+        <point x="147" y="166"></point>
+      </polygon>
+      <polygon color="-1920102913" filled="true" marked="true">
+        <point x="79" y="182"></point>
+        <point x="95" y="152"></point>
+        <point x="115" y="120"></point>
+        <point x="126" y="95"></point>
+        <point x="137" y="64"></point>
+        <point x="144" y="37"></point>
+        <point x="150" y="6"></point>
+        <point x="154" y="165"></point>
+      </polygon>
+    </shape>
     <shape name="face happy" rotatable="false" editableColorIndex="0">
       <circle x="8" y="8" marked="true" color="-1920102913" diameter="285" filled="true"></circle>
       <circle x="60" y="75" marked="false" color="255" diameter="60" filled="true"></circle>
@@ -769,6 +792,72 @@ end]]></code>
     </shape>
     <shape name="line half" rotatable="true" editableColorIndex="0">
       <line endX="150" startY="0" marked="true" color="-1920102913" endY="150" startX="150"></line>
+    </shape>
+    <shape name="macrophage-cell-image" rotatable="true" editableColorIndex="3">
+      <circle x="0" y="0" marked="false" color="-1920102913" diameter="300" filled="false"></circle>
+      <circle x="15" y="150" marked="false" color="-1" diameter="30" filled="true"></circle>
+      <circle x="45" y="195" marked="false" color="-1" diameter="30" filled="true"></circle>
+      <circle x="120" y="240" marked="false" color="-1" diameter="30" filled="true"></circle>
+      <circle x="84" y="174" marked="false" color="2085659903" diameter="42" filled="true"></circle>
+      <circle x="210" y="180" marked="false" color="2085659903" diameter="30" filled="true"></circle>
+      <circle x="150" y="180" marked="false" color="-1920102913" diameter="0" filled="true"></circle>
+      <circle x="234" y="129" marked="false" color="-1" diameter="42" filled="true"></circle>
+      <circle x="180" y="240" marked="false" color="2085659903" diameter="30" filled="true"></circle>
+      <circle x="75" y="15" marked="false" color="2085659903" diameter="150" filled="true"></circle>
+    </shape>
+    <shape name="monster" rotatable="false" editableColorIndex="0">
+      <polygon color="-1920102913" filled="true" marked="true">
+        <point x="75" y="150"></point>
+        <point x="90" y="195"></point>
+        <point x="210" y="195"></point>
+        <point x="225" y="150"></point>
+        <point x="255" y="120"></point>
+        <point x="255" y="45"></point>
+        <point x="180" y="0"></point>
+        <point x="120" y="0"></point>
+        <point x="45" y="45"></point>
+        <point x="45" y="120"></point>
+      </polygon>
+      <circle x="165" y="60" marked="false" color="255" diameter="60" filled="true"></circle>
+      <circle x="75" y="60" marked="false" color="255" diameter="60" filled="true"></circle>
+      <polygon color="-1920102913" filled="true" marked="true">
+        <point x="225" y="150"></point>
+        <point x="285" y="195"></point>
+        <point x="285" y="285"></point>
+        <point x="255" y="300"></point>
+        <point x="255" y="210"></point>
+        <point x="180" y="165"></point>
+      </polygon>
+      <polygon color="-1920102913" filled="true" marked="true">
+        <point x="75" y="150"></point>
+        <point x="15" y="195"></point>
+        <point x="15" y="285"></point>
+        <point x="45" y="300"></point>
+        <point x="45" y="210"></point>
+        <point x="120" y="165"></point>
+      </polygon>
+      <polygon color="-1920102913" filled="true" marked="true">
+        <point x="210" y="210"></point>
+        <point x="225" y="285"></point>
+        <point x="195" y="285"></point>
+        <point x="165" y="165"></point>
+      </polygon>
+      <polygon color="-1920102913" filled="true" marked="true">
+        <point x="90" y="210"></point>
+        <point x="75" y="285"></point>
+        <point x="105" y="285"></point>
+        <point x="135" y="165"></point>
+      </polygon>
+      <rectangle endX="165" startY="165" marked="true" color="-1920102913" endY="270" startX="135" filled="true"></rectangle>
+    </shape>
+    <shape name="neutrophil-cell-image" rotatable="true" editableColorIndex="1">
+      <polygon color="-1920102913" filled="true" marked="false">
+        <point x="45" y="75"></point>
+      </polygon>
+      <circle x="-15" y="-30" marked="false" color="-303222273" diameter="330" filled="true"></circle>
+      <circle x="33" y="18" marked="false" color="-528509185" diameter="85" filled="true"></circle>
+      <circle x="136" y="16" marked="false" color="-528509185" diameter="120" filled="true"></circle>
+      <circle x="31" y="121" marked="false" color="-528509185" diameter="150" filled="true"></circle>
     </shape>
     <shape name="pentagon" rotatable="false" editableColorIndex="0">
       <polygon color="-1920102913" filled="true" marked="true">
