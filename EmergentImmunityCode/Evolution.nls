@@ -1,3 +1,10 @@
+; evolution runs every 50 ticks for all three agent populations
+; each population selects its fittest members as parents,
+; creates offspring through recombination (immune cells) or mutation (bacteria),
+; then replaces the entire old population with the new evolved generation
+
+; ---- saves the best current genomes without killing any agents ----
+; called once at setup to seed the genome globals before the first evolution cycle
 to seed-generation-records
   if any? macrophages [
     let best1 max-one-of macrophages [eat-count + (ticks-survived * 0.1)]
@@ -8,6 +15,7 @@ to seed-generation-records
       let best2 max-one-of remaining-macrophages [eat-count + (ticks-survived * 0.1)]
       set last-fittest-macrophage-genome-2 [genome] of best2
     ] [
+      ; only one macrophage exists — use same genome for both parents
       set last-fittest-macrophage-genome-2 last-fittest-macrophage-genome-1
     ]
   ]
@@ -26,15 +34,20 @@ to seed-generation-records
   ]
 
   if any? bacteria [
-    let fittest max-one-of bacteria [ticks-survived + (times-fooled * 2)]
+    ; bacteria use asexual reproduction so only one parent genome is needed
+    ; EDIT: added similarity-to-body * 10 so selection pressure favours bacteria
+    ; that are already close to body-genome, giving evolution a direction to climb
+    let fittest max-one-of bacteria [ticks-survived + (times-fooled * 2) + (similarity-to-body * 10)]
     set last-fittest-bacteria-genome [genome] of fittest
   ]
 end
 
-
-
-;;MACROPHAGE EVOULTION 
+; ---- MACROPHAGE EVOLUTION ----
+; fitness = eat-count + 0.1 * ticks-survived
+; rewards macrophages that ate many bacteria AND survived long
+; two parents are selected, their genomes are recombined, then mutated
 to evolve-macrophages
+  ; save the two best macrophage genomes before the population is killed
   if any? macrophages [
     let parent1 max-one-of macrophages [eat-count + (ticks-survived * 0.1)]
     set last-fittest-macrophage-genome-1 [genome] of parent1
@@ -48,6 +61,7 @@ to evolve-macrophages
     ]
   ]
 
+  ; fallback: if no genome was ever recorded, generate a random one
   if last-fittest-macrophage-genome-1 = "" [
     set last-fittest-macrophage-genome-1 randomGenomeFunction
   ]
@@ -55,21 +69,28 @@ to evolve-macrophages
     set last-fittest-macrophage-genome-2 last-fittest-macrophage-genome-1
   ]
 
+  ; create offspring genome via crossover then mutation
   let new-genome recombinationFunction last-fittest-macrophage-genome-1 last-fittest-macrophage-genome-2
   set new-genome mutationFunction new-genome (mutation-rate% / 100)
 
+  ; kill entire old generation
   ask macrophages [ die ]
+
+  ; spawn a fresh batch using the evolved genome
   let room max (list 0 (max-macrophages - count macrophages))
   create-macrophages min (list macrophage-spawn-rate room) [
     initialise-macrophage
     set genome new-genome
+    ; re-derive phenotype traits from the new evolved genome
     set sensitivity length filter [c -> c = "A"] (n-values (length genome) [i -> substring genome i (i + 1)])
-    set max-eat length filter [c -> c = "G"] (n-values (length genome) [i -> substring genome i (i + 1)])
+    set max-eat     length filter [c -> c = "G"] (n-values (length genome) [i -> substring genome i (i + 1)])
+    if max-eat < 1 [ set max-eat 1 ]
   ]
 end
 
-
-;;NEUTROPHILS EVOULTION 
+; ---- NEUTROPHIL EVOLUTION ----
+; fitness = bacteria-killed - 0.5 * friendly-fire
+; rewards neutrophils that killed many bacteria but penalises collateral tissue damage
 to evolve-neutrophils
   if any? neutrophils [
     let parent1 max-one-of neutrophils [bacteria-killed - (friendly-fire * 0.5)]
@@ -95,20 +116,27 @@ to evolve-neutrophils
   set new-genome mutationFunction new-genome (mutation-rate% / 100)
 
   ask neutrophils [ die ]
+
   let room max (list 0 (max-neutrophils - count neutrophils))
   create-neutrophils min (list neutrophil-spawn-rate room) [
     initialise-neutrophil
     set genome new-genome
-    set sensitivity length filter [c -> c = "C"] (n-values (length genome) [i -> substring genome i (i + 1)])
+    ; re-derive phenotype traits from the new evolved genome
+    set sensitivity   length filter [c -> c = "C"] (n-values (length genome) [i -> substring genome i (i + 1)])
     set damage-radius length filter [c -> c = "T"] (n-values (length genome) [i -> substring genome i (i + 1)])
+    if damage-radius < 1 [ set damage-radius 1 ]
   ]
 end
 
-
-;;BACTERIA EVOLUTION 
+; ---- BACTERIA EVOLUTION ----
+; fitness = ticks-survived + 2*times-fooled + 10*similarity-to-body
+; rewards bacteria that lived long, fooled immune cells, AND are close to body-genome
+; bacteria reproduce asexually — one parent, directed mutation only, no recombination
 to evolve-bacteria
   if any? bacteria [
-    let fittest max-one-of bacteria [ticks-survived + (times-fooled * 2)]
+    ; EDIT: added similarity-to-body * 10 to fitness so the bacterium chosen as
+    ; parent is the one already closest to body-genome, giving evolution a direction
+    let fittest max-one-of bacteria [ticks-survived + (times-fooled * 2) + (similarity-to-body * 10)]
     set last-fittest-bacteria-genome [genome] of fittest
   ]
 
@@ -116,18 +144,25 @@ to evolve-bacteria
     set last-fittest-bacteria-genome randomGenomeFunction
   ]
 
-  let new-genome mutationFunction last-fittest-bacteria-genome (mutation-rate% / 100)
-  let new-similarity genome-similarity new-genome body-genome
+  ; save parent genome before wiping the population
+  ; must be saved here or it is lost when ask bacteria [die] runs
+  let parent-genome last-fittest-bacteria-genome
 
   ask bacteria [ die ]
+
+  ; EDIT: switched from mutationFunction to directedMutationFunction
+  ; directedMutationFunction nudges each character toward the matching body-genome base
+  ; so bacteria actively climb toward mimicry each generation instead of random walking
+  ; EDIT: dividing by 1000 instead of 100 slows the climb so it is visible on the graph
+  ; at mutation-rate% = 59 this gives ~5.9% directed nudge per character per generation
   create-bacteria min (list initial-bacteria-count max-bacteria) [
-    set genome new-genome
-    set similarity-to-body new-similarity
+    set genome directedMutationFunction parent-genome body-genome (mutation-rate% / 1000)
+    set similarity-to-body genome-similarity genome body-genome
     set ticks-survived 0
     set times-fooled 0
-    set shape "circle"
+    set shape "bug"
     set color red
-    set size 1
+    set size 1.2
     let start-patch one-of patches with [healthy?]
     ifelse start-patch != nobody [
       move-to start-patch
@@ -136,6 +171,8 @@ to evolve-bacteria
     ]
   ]
 end
+
+; ---- reporters used by main.nlogo GUI monitors ----
 
 to-report fittest-macrophage-genome
   report last-fittest-macrophage-genome-1
@@ -152,23 +189,7 @@ end
 to-report fittest-neutrophil-genome-second
   report last-fittest-neutrophil-genome-2
 end
-  
 
 to-report fittest-bacteria-genome
   report last-fittest-bacteria-genome
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

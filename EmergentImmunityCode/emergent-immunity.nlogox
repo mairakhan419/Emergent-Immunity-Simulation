@@ -10,193 +10,239 @@
 ]
 
 globals [
-  bases ; the four dna letters used when building genome 
-  generation ;tracks which evolutionary generation we are on 
+  bases          ; the four dna letters used when building genomes
+  generation     ; tracks which evolutionary generation we are on
   
-  ;reference dna representing what a healthy cell in this system looks liek 
-  ;used by bacteria to evolve toward 
-  ;and used by immune cells to compare for the levenshtein similarity score 
+  ; reference dna representing what a healthy cell in this system looks like
+  ; used by bacteria to evolve toward
+  ; and used by immune cells to compare for the levenshtein similarity score
   body-genome
   
-  ;global variables that save the best genomes seen for current generation 
+  ; global variables that save the best genomes seen for the current generation
   last-fittest-macrophage-genome-1
   last-fittest-macrophage-genome-2
   last-fittest-neutrophil-genome-1
   last-fittest-neutrophil-genome-2
-  last-fittest-bacteria-genome   ;bacteria reproduce asexually
+  last-fittest-bacteria-genome   ; bacteria reproduce asexually so only one parent needed
   
-  ;;to help with the model exploding in size
+  ; population caps to help with the model exploding in size
   max-bacteria
   max-macrophages
   max-neutrophils
 ]
 
-; ------ setup funciton: runs when setup button clicked -------
+; ------ setup function: runs when setup button clicked -------
 to setup
   clear-all
   default-settings
   set bases ["A" "G" "T" "C"]
-  set generation 1  ;start on generation 1 
-  
-  ;generate the body genome once 
+  set generation 1  ; start on generation 1
+
+  ; generate the body genome once — this is the healthy-cell dna signature
+  ; bacteria will try to evolve toward this to fool immune cells
   set body-genome randomGenomeFunction
-  
-  ;initialise the saved genome globals to empty strings
+
+  ; initialise saved genome globals to empty strings
+  ; evolution.nls will populate these after the first generation
   set last-fittest-macrophage-genome-1 ""
   set last-fittest-macrophage-genome-2 ""
   set last-fittest-neutrophil-genome-1 ""
   set last-fittest-neutrophil-genome-2 ""
   set last-fittest-bacteria-genome ""
-  
-  ;keep breed sizes bounded so later ticks do not become dramatically slower
-  set max-bacteria min (list (count patches) (max (list 150 (initial-bacteria-count * 10))))
-  set max-macrophages min (list (count patches) (max (list 40 (macrophage-spawn-rate * 20))))
-  set max-neutrophils min (list (count patches) (max (list 30 (neutrophil-spawn-rate * 20))))
-  
-  setup-healthy-cells ;fills the grid with green cells 
-  setup-bacteria           ;steup bacteria cells 
-  setup-macrophages   ;places the first macrophage cells and reset past pheromone 
-  setup-neutrophils   ;setup neutrophils  
+
+  ; keep breed sizes bounded so later ticks do not become dramatically slower
+  set max-bacteria    min (list (count patches) (max (list 150 (initial-bacteria-count * 10))))
+  set max-macrophages min (list (count patches) (max (list 40  (macrophage-spawn-rate * 20))))
+  set max-neutrophils min (list (count patches) (max (list 30  (neutrophil-spawn-rate * 20))))
+
+  setup-healthy-cells  ; fills the grid with green healthy tissue patches
+  setup-bacteria       ; places the initial bacteria agents
+  setup-macrophages    ; places the first macrophage agents and resets pheromone
+  setup-neutrophils    ; places the first neutrophil agents
   seed-generation-records
   reset-ticks
 end
 
-; ---- main function: everything in here runs every tick 
+; ---- main loop: everything in here runs every tick ----
 to go
-  ;check if the simulation should stop based on two states 
-  ;END STATE 1: no bacteria left (immune system success)
+  ; END STATE 1: no bacteria left — immune system success
   if not any? bacteria [
-    output-print(word "infection cleared at tick " ticks " (generation " generation ")")
+    output-print (word "Infection cleared at tick " ticks " (generation " generation ")")
     stop
   ]
-  
-  ;END STATE 2: no healthy tissues left (immune system collapse)
+
+  ; END STATE 2: no healthy tissue left — immune system collapse
   if not any? patches with [healthy?] [
-    output-print (word "immune collapse at tick " ticks " (generation " generation ")")
-    stop 
+    output-print (word "Immune collapse at tick " ticks " (generation " generation ")")
+    stop
   ]
-  
-  ;healthy tissue first, bacteria then attack, then first wave of immune response, then second wave of immune reponse 
-  update-healthy-cells   ;p1 pheromone diffuses and fades, and patch colours update
-  update-bacteria        ;bacteria spread, eat healthy cells, mark patches as eaten 
-  update-macrophages     ;new macrophages spawn, follow p1 trail, and they move and eat bacteria 
-  update-neutrophils     ;neutrophils spawn, follow p2 trail, and fire spit attack 
-  
-  
-  ;every 50 ticks, run an evolution cycle 
+
+  ; update order matters:
+  ; healthy tissue processes eaten signals first,
+  ; then bacteria spread and eat,
+  ; then first wave immune response (macrophages),
+  ; then second wave immune response (neutrophils)
+  update-healthy-cells
+  update-bacteria
+  update-macrophages
+  update-neutrophils
+
+  ; every 50 ticks run an evolution cycle for all three populations
+  ; and partially restore healthy tissue to simulate natural regeneration
   if ticks > 0 and ticks mod 50 = 0 [
-    evolve-macrophages 
+    evolve-macrophages
     evolve-neutrophils
     evolve-bacteria
+    respawn-healthy-cells  ; NEW: restore 10% of healthy tissue each generation
     set generation generation + 1
     output-print (word "Generation " generation " started at tick " ticks)
   ]
-  
+
   tick
 end
 
 ; ---- MONITOR REPORTERS ----
-;how many healthy cells are there on the grid right now 
-to-report healthy-cell-count 
+
+; how many healthy cells are there on the grid right now
+to-report healthy-cell-count
   report count patches with [healthy?]
 end
 
-;how any bacteria agents arw alive right now 
-to-report bacteria-count 
+; how many bacteria agents are alive right now
+to-report bacteria-count
   report count bacteria
 end
 
-;how many macrophage agents are alive right now
+; how many macrophage agents are alive right now
 to-report macrophage-count
-  report count macrophages 
+  report count macrophages
 end
 
-;how many neutrophil agents are alive 
-to-report neutrophil-count 
-  report count neutrophils 
+; how many neutrophil agents are alive right now
+to-report neutrophil-count
+  report count neutrophils
 end
 
-;how many dead cells are there 
+; how many patches have been eaten by bacteria
 to-report dead-cell-count
   report count patches with [eaten?]
 end
 
-;what generation currently on 
+; what generation we are currently on
 to-report generation-number
   report generation
 end
 
-;DONT KNOW IF WANT TO KEEP ???
-;report back how well the bacteria was is successfully mimiking healthy cell genome 
+; average similarity score of all live bacteria to the body genome
+; higher = bacteria are evolving better mimicry of healthy cells
 to-report bacteria-copy-score
   ifelse any? bacteria [
-    let best min-one-of bacteria [who]
-    report mean [similarity-to-body] of body-genome
+    report mean [similarity-to-body] of bacteria
   ] [
     report 0
   ]
 end
 
+; ---- GUI: SORTED genome display reporters ----
+; these replace the raw genome string monitors in the interface
+; sorting into ACGT order makes nucleotide counts easy to read at a glance
+; wire each of these to the corresponding monitor box in the NetLogo interface
+
+to-report gui-top-macrophage-genome-1
+  let g last-fittest-macrophage-genome-1
+  if not is-string? g or length g = 0 [ report "—" ]
+  report sort-genome-string g
+end
+
+to-report gui-top-macrophage-genome-2
+  let g last-fittest-macrophage-genome-2
+  if not is-string? g or length g = 0 [ report "—" ]
+  report sort-genome-string g
+end
+
+to-report gui-top-neutrophil-genome-1
+  let g last-fittest-neutrophil-genome-1
+  if not is-string? g or length g = 0 [ report "—" ]
+  report sort-genome-string g
+end
+
+to-report gui-top-neutrophil-genome-2
+  let g last-fittest-neutrophil-genome-2
+  if not is-string? g or length g = 0 [ report "—" ]
+  report sort-genome-string g
+end
+
+to-report gui-top-bacteria-genome
+  let g last-fittest-bacteria-genome
+  if not is-string? g or length g = 0 [ report "—" ]
+  report sort-genome-string g
+end
+
+; helper: sorts a genome string into ACGT order
+; makes it easy to visually compare nucleotide composition across generations
+; example: "TGACTAGC" becomes "AACCTGT" -> "AACCGTT"
+to-report sort-genome-string [g]
+  let chars n-values (length g) [i -> substring g i (i + 1)]
+  let na length filter [c -> c = "A"] chars
+  let nc length filter [c -> c = "C"] chars
+  let ng length filter [c -> c = "G"] chars
+  let nt length filter [c -> c = "T"] chars
+  let result ""
+  repeat na [ set result word result "A" ]
+  repeat nc [ set result word result "C" ]
+  repeat ng [ set result word result "G" ]
+  repeat nt [ set result word result "T" ]
+  report result
+end
+
+; kept for backwards compatibility with existing interface monitors
 to-report second-best-macrophage-genome
-  report last-fittest-macrophage-genome-2
+  report gui-top-macrophage-genome-2
 end
 
 to-report send-best-neutrophil-genome
-  report last-fittest-neutrophil-genome-2
+  report gui-top-neutrophil-genome-2
 end
 
-
+; ---- DEFAULT SETTINGS ----
+; presets slider values based on the chosen simulation model dropdown
 to default-settings
-  if Simulation-Model = "Infection Cleared"
-  [
+  if Simulation-Model = "Infection Cleared" [
     set Initial-Healthy-Cells-Count 27
     set Initial-Bacteria-Count 35
     set Bacteria-Spread-Chance% 35
     set Macrophage-Sensitivity-A 5
     set Macrophage-Eat-Capacity-G 5
     set Macrophage-Spawn-Rate 3
-    set Neutrophil-Sensitivity-C 4 
+    set Neutrophil-Sensitivity-C 4
     set Neutrophil-Damage-Radius-T 2
     set Neutrophil-Spawn-Rate 4
     set Mutation-Rate% 59
-    set lvenchisten-function 57
+    set levenshtein-similarity-threshold 57
   ]
-  if Simulation-Model = "Immune System Collapse"[
+  if Simulation-Model = "Immune System Collapse" [
     set Initial-Healthy-Cells-Count 15
     set Initial-Bacteria-Count 55
     set Bacteria-Spread-Chance% 65
     set Macrophage-Sensitivity-A 2
     set Macrophage-Eat-Capacity-G 2
     set Macrophage-Spawn-Rate 2
-    set Neutrophil-Sensitivity-C 1 
+    set Neutrophil-Sensitivity-C 1
     set Neutrophil-Damage-Radius-T 1
     set Neutrophil-Spawn-Rate 1
     set Mutation-Rate% 70
-    set lvenchisten-function 80
-    
+    set levenshtein-similarity-threshold 80
   ]
-  if Simulation-Model = "Custom"[
+  if Simulation-Model = "Custom" [
+    ; user controls all sliders manually — no defaults applied
   ]
-  
-  
-end
-
-
-
-
-
-
-
-
-
-
-]]></code>
+end]]></code>
   <widgets>
     <view x="265" wrappingAllowedX="true" y="20" frameRate="30.0" minPycor="-16" height="783" showTickCounter="true" patchSize="17.73" fontSize="10" wrappingAllowedY="true" width="641" tickCounterLabel="ticks" maxPycor="16" updateMode="0" maxPxcor="13" minPxcor="-13"></view>
     <note x="910" y="0" backgroundDark="0" fontSize="11" width="250" markdown="true" height="41" textColorDark="-15302303" textColorLight="-15302303" backgroundLight="0">---------------- ANALYSIS --------------</note>
-    <monitor x="1080" precision="17" y="45" height="60" fontSize="10" display="Top 2 Macrophage Genome" width="160" sizeVersion="0">fittest-macrophage-genome-second</monitor>
-    <monitor x="915" precision="17" y="110" height="60" fontSize="10" display="Top 1 Neutrophil Genome " width="160" sizeVersion="0">fittest-neutrophil-genome</monitor>
-    <monitor x="1080" precision="17" y="110" height="60" fontSize="10" display="Top 2 Neutrophil Genome " width="160" sizeVersion="0">fittest-neutrophil-genome-second</monitor>
+    <monitor x="1080" precision="17" y="45" height="60" fontSize="10" display="Top 2 Macrophage Genome" width="160" sizeVersion="0">gui-top-macrophage-genome-2</monitor>
+    <monitor x="915" precision="17" y="110" height="60" fontSize="10" display="Top 1 Neutrophil Genome " width="160" sizeVersion="0">gui-top-neutrophil-genome-1</monitor>
+    <monitor x="1080" precision="17" y="110" height="60" fontSize="10" display="Top 2 Neutrophil Genome " width="160" sizeVersion="0">gui-top-neutrophil-genome-2</monitor>
     <plot x="915" autoPlotX="true" yMax="10.0" autoPlotY="true" y="250" xMin="0.0" height="160" legend="false" xMax="10.0" yMin="0.0" display="Immune Cell Activity" width="225" sizeVersion="0">
       <setup></setup>
       <update></update>
@@ -209,7 +255,7 @@ end
         <update>plot count neutrophils</update>
       </pen>
     </plot>
-    <plot x="915" autoPlotX="false" yMax="1.0" autoPlotY="false" y="420" xMin="0.0" height="160" legend="false" xMax="10.0" yMin="0.0" display="Genome Fitness (avg)" width="225" sizeVersion="0">
+    <plot x="915" autoPlotX="false" yMax="1.0" autoPlotY="false" y="420" xMin="0.0" height="160" legend="false" xMax="1.0" yMin="0.0" display="Genome Fitness (avg)" width="225" sizeVersion="0">
       <setup></setup>
       <update></update>
       <pen interval="1.0" mode="0" display="default" color="-2674135" legend="true">
@@ -218,17 +264,17 @@ end
       </pen>
       <pen interval="1.0" mode="0" display="pen-1" color="-13840069" legend="true">
         <setup></setup>
-        <update>plot report-levenshtein-distance </update>
+        <update>plot (levenshtein-similarity-threshold / 100)</update>
       </pen>
     </plot>
-    <monitor x="915" precision="17" y="45" height="60" fontSize="10" display="Top 1 Macrophage Genome" width="160" sizeVersion="0">fittest-macrophage-genome</monitor>
+    <monitor x="915" precision="17" y="45" height="60" fontSize="10" display="Top 1 Macrophage Genome" width="160" sizeVersion="0">gui-top-macrophage-genome-1</monitor>
     <note x="900" y="565" backgroundDark="0" fontSize="11" width="250" markdown="true" height="41" textColorDark="-15302303" textColorLight="-15302303" backgroundLight="0">------------------- LIVE COUNTS -----------------</note>
     <monitor x="1030" precision="17" y="610" height="60" fontSize="10" display="bacteria" width="110" sizeVersion="0">bacteria-count</monitor>
     <monitor x="915" precision="17" y="675" height="60" fontSize="10" display="macrophage cells" width="110" sizeVersion="0">macrophage-count</monitor>
     <monitor x="1030" precision="17" y="675" height="60" fontSize="10" display="neutrophils cells" width="110" sizeVersion="0">neutrophil-count</monitor>
     <monitor x="915" precision="17" y="740" height="60" fontSize="10" display="dead cells" width="110" sizeVersion="0">dead-cell-count</monitor>
     <monitor x="1030" precision="17" y="740" height="60" fontSize="10" display="generation" width="110" sizeVersion="0">generation-number</monitor>
-    <monitor x="915" precision="17" y="180" height="60" fontSize="10" display="Top Bacteria Genome" width="160" sizeVersion="0">fittest-bacteria-genome</monitor>
+    <monitor x="915" precision="17" y="180" height="60" fontSize="10" display="Top Bacteria Genome" width="160" sizeVersion="0">gui-top-bacteria-genome</monitor>
     <plot x="1150" autoPlotX="true" yMax="10.0" autoPlotY="true" y="320" xMin="0.0" height="160" legend="false" xMax="10.0" yMin="0.0" display="Bacteria Population Over Time" width="225" sizeVersion="0">
       <setup></setup>
       <update></update>
@@ -237,9 +283,9 @@ end
         <update>plot count bacteria</update>
       </pen>
     </plot>
-    <slider x="5" step="1" y="245" max="100" width="250" display="Bacteria-Spread-Chance%" height="50" min="0" direction="Horizontal" default="65.0" variable="Bacteria-Spread-Chance%"></slider>
-    <slider x="5" step="1" y="190" max="100" width="250" display="Initial-Bacteria-Count" height="50" min="0" direction="Horizontal" default="55.0" variable="Initial-Bacteria-Count"></slider>
-    <chooser x="10" y="5" height="60" variable="Simulation-Model" current="0" width="250" display="Simulation-Model">
+    <slider x="5" step="1" y="245" max="100" width="250" display="Bacteria-Spread-Chance%" height="50" min="0" direction="Horizontal" default="35.0" variable="Bacteria-Spread-Chance%"></slider>
+    <slider x="5" step="1" y="190" max="100" width="250" display="Initial-Bacteria-Count" height="50" min="0" direction="Horizontal" default="36.0" variable="Initial-Bacteria-Count"></slider>
+    <chooser x="10" y="5" height="60" variable="Simulation-Model" current="2" width="250" display="Simulation-Model">
       <choice type="string" value="Immune System Collapse"></choice>
       <choice type="string" value="Infection Cleared"></choice>
       <choice type="string" value="Custom"></choice>
@@ -248,19 +294,19 @@ end
     <button x="90" y="70" height="40" disableUntilTicks="false" forever="false" kind="Observer" width="85" display="Go Once"></button>
     <button x="180" y="70" height="40" disableUntilTicks="false" forever="true" kind="Observer" width="80" display="Go ">go</button>
     <note x="5" y="100" backgroundDark="0" fontSize="11" width="250" markdown="true" height="40" textColorDark="-15302303" textColorLight="-15302303" backgroundLight="0">---------------- POPULATION ----------------</note>
-    <slider x="5" step="1" y="135" max="100" width="250" display="Initial-Healthy-Cells-Count" height="50" min="0" direction="Horizontal" default="15.0" variable="Initial-Healthy-Cells-Count"></slider>
+    <slider x="5" step="1" y="135" max="100" width="250" display="Initial-Healthy-Cells-Count" height="50" min="0" direction="Horizontal" default="37.0" variable="Initial-Healthy-Cells-Count"></slider>
     <monitor x="915" precision="17" y="610" height="60" fontSize="10" display="healthy cells" width="110" sizeVersion="0">healthy-cell-count</monitor>
-    <note x="0" y="280" backgroundDark="0" fontSize="11" width="250" markdown="true" height="41" textColorDark="-15302303" textColorLight="-15302303" backgroundLight="0">---------- MACROPHAGE BEHAVIOUR ---------</note>
-    <slider x="5" step="1" y="315" max="16" width="250" display="Macrophage-Sensitivity-A" height="50" min="0" direction="Horizontal" default="2.0" variable="Macrophage-Sensitivity-A"></slider>
-    <slider x="5" step="1" y="370" max="16" width="250" display="Macrophage-Eat-Capacity-G" height="50" min="0" direction="Horizontal" default="2.0" variable="Macrophage-Eat-Capacity-G"></slider>
-    <slider x="5" step="1" y="425" max="100" width="250" display="Macrophage-Spawn-Rate" height="50" min="0" direction="Horizontal" default="2.0" variable="Macrophage-Spawn-Rate"></slider>
-    <note x="5" y="460" backgroundDark="0" fontSize="11" width="250" markdown="true" height="41" textColorDark="-15302303" textColorLight="-15302303" backgroundLight="0">---------- NEUTROPHIL BEHAVIOUR ---------</note>
-    <slider x="5" step="1" y="495" max="16" width="250" display="Neutrophil-Sensitivity-C" height="50" min="0" direction="Horizontal" default="1.0" variable="Neutrophil-Sensitivity-C"></slider>
-    <slider x="5" step="1" y="550" max="16" width="250" display="Neutrophil-Damage-Radius-T" height="50" min="0" direction="Horizontal" default="1.0" variable="Neutrophil-Damage-Radius-T"></slider>
-    <slider x="5" step="1" y="605" max="16" width="250" display="Neutrophil-Spawn-Rate" height="50" min="0" direction="Horizontal" default="1.0" variable="Neutrophil-Spawn-Rate"></slider>
-    <note x="10" y="640" backgroundDark="0" fontSize="11" width="250" markdown="true" height="41" textColorDark="-15302303" textColorLight="-15302303" backgroundLight="0">---------------- EVOLUTION ----------------</note>
-    <slider x="5" step="1" y="675" max="100" width="250" display="Mutation-Rate%" height="50" min="0" direction="Horizontal" default="70.0" variable="Mutation-Rate%"></slider>
-    <slider x="5" step="1" y="730" max="100" width="250" display="lvenchisten-function" height="50" min="0" direction="Horizontal" default="80.0" variable="lvenchisten-function"></slider>
+    <slider x="5" step="1" y="760" max="100" width="250" display="levenshtein-similarity-threshold" height="50" min="0" direction="Horizontal" default="93.0" variable="levenshtein-similarity-threshold"></slider>
+    <slider x="5" step="1" y="705" max="100" width="250" display="Mutation-Rate%" height="50" min="0" direction="Horizontal" default="35.0" variable="Mutation-Rate%"></slider>
+    <note x="10" y="665" backgroundDark="0" fontSize="11" width="250" markdown="true" height="35" textColorDark="-15302303" textColorLight="-15302303" backgroundLight="0">---------------- EVOLUTION ----------------</note>
+    <slider x="5" step="1" y="615" max="16" width="250" display="Neutrophil-Spawn-Rate" height="50" min="0" direction="Horizontal" default="2.0" variable="Neutrophil-Spawn-Rate"></slider>
+    <slider x="5" step="1" y="565" max="16" width="250" display="Neutrophil-Damage-Radius-T" height="50" min="0" direction="Horizontal" default="1.0" variable="Neutrophil-Damage-Radius-T"></slider>
+    <slider x="5" step="1" y="515" max="16" width="250" display="Neutrophil-Sensitivity-C" height="50" min="0" direction="Horizontal" default="1.0" variable="Neutrophil-Sensitivity-C"></slider>
+    <note x="5" y="470" backgroundDark="0" fontSize="11" width="250" markdown="true" height="41" textColorDark="-15302303" textColorLight="-15302303" backgroundLight="0">---------- NEUTROPHIL BEHAVIOUR ---------</note>
+    <slider x="5" step="1" y="430" max="100" width="250" display="Macrophage-Spawn-Rate" height="50" min="0" direction="Horizontal" default="3.0" variable="Macrophage-Spawn-Rate"></slider>
+    <slider x="5" step="1" y="375" max="16" width="250" display="Macrophage-Eat-Capacity-G" height="50" min="0" direction="Horizontal" default="2.0" variable="Macrophage-Eat-Capacity-G"></slider>
+    <slider x="5" step="1" y="320" max="16" width="250" display="Macrophage-Sensitivity-A" height="50" min="0" direction="Horizontal" default="1.0" variable="Macrophage-Sensitivity-A"></slider>
+    <note x="0" y="285" backgroundDark="0" fontSize="11" width="250" markdown="true" height="41" textColorDark="-15302303" textColorLight="-15302303" backgroundLight="0">---------- MACROPHAGE BEHAVIOUR ---------</note>
   </widgets>
   <info>## WHAT IS IT?
 
