@@ -1,11 +1,20 @@
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
+=======
+; healthy cells are represented as green patches on the grid
+; when bacteria eat a healthy cell it releases a distress pheromone (p1)
+; macrophages detect and follow this pheromone to find the infection site
+; pheromone diffuses and decays each tick creating a chemical gradient
+
+>>>>>>> Stashed changes
 patches-own [
-  healthy?
-  pheromone      ; death signal released when eaten
-  eaten?         ; tracks if this cell has been consumed by bacteria
+  healthy?    ; true if this patch is a living healthy tissue cell
+  pheromone   ; p1 distress signal — released when a cell is eaten by bacteria
+  eaten?      ; true if bacteria have consumed this cell this tick
 ]
 
+; ---- runs once when setup is clicked ----
 to setup-healthy-cells
   ask patches [
     set healthy? false
@@ -13,8 +22,8 @@ to setup-healthy-cells
     set pheromone 0
     set pcolor white
   ]
-  
-  ;pick number of healthy cells based on the ui slider 
+
+  ; place healthy cells on a random percentage of patches based on the slider
   ask n-of (count patches * (initial-healthy-cells-count / 100)) patches [
     set healthy? true
     set pheromone 0
@@ -22,22 +31,55 @@ to setup-healthy-cells
   ]
 end
 
-to update-healthy-cells
-  ; Eaten cells release a burst of pheromone as distress signal
-  ask patches with [healthy? and eaten?] [
-    set pheromone pheromone + 50   ; burst release on death
-    set healthy? false
-    set pcolor white               ; cell is gone
+; ---- NEW: called every generation to partially restore healthy tissue ----
+; mimics natural tissue regeneration between immune cycles
+; restores 10% of the initial healthy cell count on empty non-occupied patches
+; this prevents the simulation from ending prematurely due to total tissue loss
+; before the immune system has had a chance to clear the infection
+to respawn-healthy-cells
+  ; only target patches that are empty — not healthy, not occupied by any agent
+  let dead-patches patches with [
+    not healthy? and 
+    not any? bacteria-on self and
+    not any? macrophages-on self and
+    not any? neutrophils-on self
   ]
 
-  ; Pheromone diffuses and decays across all patches
+  ; calculate how many cells to restore (10% of original healthy count)
+  let respawn-count round (count patches * (initial-healthy-cells-count / 100) * 0.10)
+  let respawn-count-actual min (list respawn-count count dead-patches)
+
+  if respawn-count-actual > 0 [
+    ask n-of respawn-count-actual dead-patches [
+      set healthy? true
+      set eaten? false
+      set pheromone 0
+      set pcolor green
+    ]
+  ]
+end
+
+; ---- runs every tick to update pheromone and patch colours ----
+to update-healthy-cells
+  ; eaten cells release a burst of p1 pheromone as a distress signal
+  ; then mark themselves as no longer healthy
+  ask patches with [healthy? and eaten?] [
+    set pheromone pheromone + 50   ; burst release proportional to cell death
+    set healthy? false
+    set pcolor white               ; cell is gone — patch turns white
+  ]
+
+  ; p1 pheromone diffuses outward to neighbouring patches each tick
   diffuse pheromone 0.25
 
+  ; pheromone also evaporates slightly each tick
+  ; this keeps the gradient local and time-sensitive
   ask patches [
-    set pheromone pheromone * 0.98  ; evaporation
+    set pheromone pheromone * 0.98  ; 2% evaporation per tick
 
-    ; Visualize pheromone trail so macrophages (and us) can see it
+    ; update patch colour to reflect current state
     ifelse healthy? [
+<<<<<<< Updated upstream
       set pcolor green              ; living healthy cell
     ] [
       ifelse pheromone > 1 [
@@ -56,5 +98,13 @@ to update-healthy-cells
     set pcolor green
   ]
   
+end
+>>>>>>> Stashed changes
+=======
+      set pcolor green   ; living healthy cell
+    ] [
+      set pcolor white   ; empty or eaten patch
+    ]
+  ]
 end
 >>>>>>> Stashed changes

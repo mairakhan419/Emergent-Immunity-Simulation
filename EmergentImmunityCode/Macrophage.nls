@@ -1,88 +1,99 @@
-;macrophages are the first line of defence in the simulation 
-;when a healthy cell gets eaten by bacteria, it releases a distress pheromone (p1)
-;and then macrophages detect that signal, move toward it, and eat the bacteria.
-;after eating, macrophages leave their own pheromone (p2) used by the neutrophils 
+;; macrophages are the first line of defence in the simulation
+;; when a healthy cell gets eaten by bacteria, it releases a distress pheromone (p1)
+;; macrophages detect that signal, move toward it, and eat the bacteria
+;; after eating, macrophages leave their own pheromone (p2) used by the neutrophils
 
-;macrophage genome:
-;A count --- sensitivity to p1 pheromone 
-;G count --- max-eat for have many bacteria hey can eat before dying off
-;T and C unused by macrophages 
+;; macrophage genome encoding:
+;; A count --- sensitivity to p1 pheromone
+;;             more A = lower detection threshold = reacts to fainter signals
+;; G count --- max-eat: how many bacteria it can eat before dying of exhaustion
+;; T and C are unused by macrophages (filled randomly)
 
-;copy check: before eating, the macrophage compares the bacteria genome to the body-genome
-;if the bacteria looks too similar to healthy cell, macrophage then leaves it alone 
+;; immune recognition (self/non-self discrimination):
+;; before eating, the macrophage compares the bacteria genome to the body-genome
+;; using the genome-similarity score (0-1, based on Levenshtein distance)
+;; if similarity >= lvenchisten-function/100 threshold: bacterium looks like healthy
+;;   tissue — macrophage leaves it alone (bacterium gets times-fooled + 1)
+;; if similarity <  lvenchisten-function/100 threshold: bacterium looks foreign —
+;;   macrophage attacks and eats it
 
-;creating new agent type called "macrophages"
 breed [macrophages macrophage]
 
-;p2 is the signal macrophages leave behind on grid patches after eating bacteria 
-;neutrophils will follow this later 
+;; p2 is the signal macrophages leave behind on grid patches after eating bacteria
+;; neutrophils will follow this trail to find active infection sites
 patches-own [
   macrophages-pheromone
 ]
 
-;; ---- extra variables every macrophage agent will have ----
 macrophages-own [
-  genome      ;the 16-char dna string 
-  sensitivity ;how faint a p1 signal the macrophage can detect and will come from A count 
-  max-eat     ;how many bacteria it can eat before it dies of exhaustion and will come from G count 
-  eat-count   ; how many bacteria this macrophage has eaten so far 
-  ticks-survived ;how many ticks this macrophage survived, also used for fitness measure in evolution 
+  genome         ;; the 16-char dna string
+  sensitivity    ;; how faint a p1 signal the macrophage can detect — from A count
+  max-eat        ;; how many bacteria it can eat before dying of exhaustion — from G count
+  eat-count      ;; how many bacteria this macrophage has eaten so far
+  ticks-survived ;; how many ticks survived — used for fitness score in evolution
 ]
 
-; ---- function runs once the setup button is clicked on the interface ----
+;; ---- runs once when setup button is clicked ----
 to setup-macrophages
+<<<<<<< Updated upstream
   ask patches [ set macrophages-pheromone 0 ]   ;reset all p2 pheromone values on every patch to 0 (clean slate) 
   
   ;create the starting batch of macrophage depending on the slider option 
   create-macrophages macrophage-spawn-rate [
     initialise-macrophage  ;run setup block for each new macrophage 
+=======
+  ask patches [ set macrophages-pheromone 0 ]   ;; reset all p2 pheromone to 0 (clean slate)
+
+  let room max (list 0 (max-macrophages - count macrophages))
+  create-macrophages min (list macrophage-spawn-rate room) [
+    initialise-macrophage
+>>>>>>> Stashed changes
   ]
 end
 
-; ---- helper function that sets up a new macrophage 
-to initialise-macrophage 
-
-  ;build genome using the slider values for A and G count, and then 
-  ;remaining characters will be randomly chosen for Ts and Cs
+;; ---- helper: sets up a single new macrophage agent ----
+to initialise-macrophage
+  ;; build genome from slider values for A and G counts
+  ;; remaining characters are randomly T or C (unused by macrophages)
   let num-a macrophage-sensitivity-a
   let num-g macrophage-eat-capacity-g
   let num-random max (list 0 (16 - num-a - num-g))
 
-  
-  ;build each section of the genome string separately and then combine it 
-; build each section only if it has characters, otherwise use empty string
-  let a-section ifelse-value (num-a > 0) [ reduce word n-values num-a [i -> "A"]] [ "" ]
-  let g-section ifelse-value (num-g > 0) [ reduce word n-values num-g [i -> "G"]] [ "" ]
+  let a-section      ifelse-value (num-a > 0)      [ reduce word n-values num-a      [i -> "A"] ] [ "" ]
+  let g-section      ifelse-value (num-g > 0)      [ reduce word n-values num-g      [i -> "G"] ] [ "" ]
   let random-section ifelse-value (num-random > 0) [ reduce word n-values num-random [i -> one-of ["T" "C"]] ] [ "" ]
   set genome (word a-section g-section random-section)
-  
-  ;count As in the genome to set sensitivity 
-  set sensitivity length filter [c -> c ="A"] (n-values (length genome) [i -> substring genome i (i + 1)])
-  
-  ;count Gs in the genome to set max-eat 
+
+  ;; count As in genome to set sensitivity
+  set sensitivity length filter [c -> c = "A"] (n-values (length genome) [i -> substring genome i (i + 1)])
+
+  ;; count Gs in genome to set max-eat capacity
   set max-eat length filter [c -> c = "G"] (n-values (length genome) [i -> substring genome i (i + 1)])
-  
-  ;set eat count to 0 
+
+  ;; guard: macrophage must be able to eat at least 1 bacterium
+  ;; without this, macrophages with G=0 die instantly on spawn
+  if max-eat < 1 [ set max-eat 1 ]
+
   set eat-count 0
   set ticks-survived 0
-  
-  ;make the macrophage look like a purple circle 
+
   set shape "circle"
-  set color violet 
+  set color violet
   set size 1
-  
-  ; try to place the macrophage on a healthy cell patch to help starting defending tissues right away. 
-  ;if no healthy cell exists, pick random patch 
+
+  ;; try to place on a healthy cell patch to start defending tissue immediately
+  ;; fall back to any random patch if no healthy cells exist
   let start-patch one-of patches with [healthy?]
-  ifelse start-patch != nobody[
+  ifelse start-patch != nobody [
     move-to start-patch
-  ][
+  ] [
     move-to one-of patches
   ]
 end
 
-; ---- update function, and runs for every tick ----
+;; ---- runs every tick to update all macrophage behaviour ----
 to update-macrophages
+<<<<<<< Updated upstream
   ;spawn new macrophage every tick (mimics the production of new immune cell in the body)
   create-macrophages macrophage-spawn-rate [
     initialise-macrophage
@@ -108,35 +119,55 @@ to update-macrophages
   ]
   
   ;tell every macrophage to move and eat 
+=======
+  ;; spawn new macrophages up to the population cap each tick
+  ;; mimics continuous production of new immune cells in the body
+  let room max (list 0 (max-macrophages - count macrophages))
+  if room > 0 [
+    create-macrophages min (list macrophage-spawn-rate room) [
+      initialise-macrophage
+    ]
+  ]
+
+  ;; spread p2 pheromone to nearby patches so neutrophils can follow
+  diffuse macrophages-pheromone 0.25
+
+  ;; p2 pheromone fades a little each tick to keep gradient local and time-sensitive
+  ask patches [ set macrophages-pheromone (macrophages-pheromone * 0.98) ]
+
+  ;; convert the levenshtein slider to a 0-1 immune recognition threshold
+  ;; bacteria with similarity >= threshold are mistaken for healthy tissue and spared
+  ;; bacteria with similarity <  threshold look foreign and are attacked
+  let similarity-threshold (lvenchisten-function / 100)
+
+>>>>>>> Stashed changes
   ask macrophages [
     set ticks-survived ticks-survived + 1
     macrophage-move
     macrophage-eat
   ]
-  
 end
 
-; ---- function to decide where the macrophage moves each tick 
+;; ---- decides where the macrophage moves each tick ----
 to macrophage-move
-  ;calculate the minimum signal strength needed to react 
-  ;higher sensitivity means more As in dna genome = lower threshold (reats to fainter pheromone signals)
-  ;sensitivity ranges from 0 to 16, so threshold will range from 32 (barely sensitive) to 0 (super sensitive) 
+  ;; threshold determines how faint a p1 signal this macrophage will react to
+  ;; higher sensitivity (more As in genome) = lower threshold = responds to fainter signals
+  ;; sensitivity ranges 0-16 so threshold ranges 32 (barely sensitive) to 0 (super sensitive)
   let threshold (16 - sensitivity) * 2
-  
-  ;look at the 8 surrounding patches and find the one with the strongest distress 
-  ;p1 pheromone signal released from healthy cells when they get eaten by bacteria 
+
+  ;; look at 8 surrounding patches and find the one with the strongest p1 distress signal
   let best-neighbor max-one-of neighbors [pheromone]
-  
+
   ifelse [pheromone] of best-neighbor > threshold [
-    ;the signal is string enough then move toward it 
-    move-to best-neighbor 
+    move-to best-neighbor   ;; signal strong enough — move toward infection site
   ] [
-    ;no signal detected, then random randomly 
-    rt random 50 - 25 ;turn a random amount between -25 and +25 degrees 
-    fd 1 ;move forwrad 1 step 
+    ;; no signal detected — wander randomly
+    rt random 50 - 25  ;; turn random amount between -25 and +25 degrees
+    fd 1               ;; move forward 1 step
   ]
 end
 
+<<<<<<< Updated upstream
 ; ---- this function handles eating bacteria  on the current patch ----
 to macrophage-eat 
   ;check if any bacteria are sitting on the same patch as the macrophage 
@@ -149,25 +180,35 @@ to macrophage-eat
     
     ifelse similarity < (lvenchisten-function / 100 ) [
       ask target [die]
+=======
+;; ---- handles the immune recognition check and eating bacteria on current patch ----
+;; this is the self/non-self discrimination logic:
+;; the macrophage compares each bacterium's genome similarity to body-genome
+;; against the lvenchisten-function threshold to decide whether to attack or ignore
+to macrophage-eat [similarity-threshold]
+  if any? bacteria-here [
+    let target one-of bacteria-here
+
+    ;; read the bacterium's current similarity-to-body score
+    ;; this is updated every tick in bacteria-update-colour so it is always current
+    let similarity [similarity-to-body] of target
+
+    ifelse similarity < similarity-threshold [
+      ;; similarity is BELOW threshold — bacterium looks foreign enough to attack
+      ;; macrophage eats it and deposits p2 pheromone for neutrophils to follow
+      ask target [ die ]
+>>>>>>> Stashed changes
       set eat-count eat-count + 1
       set macrophages-pheromone macrophages-pheromone + 30
     ] [
-      ;leave bacteria alone, looks too much like healthy cell
-      ;this increments the bacterias fitness score 
-      ask target [set times-fooled times-fooled + 1]
+      ;; similarity is AT OR ABOVE threshold — bacterium looks too similar to healthy tissue
+      ;; macrophage mistakes it for a body cell and leaves it alone
+      ;; this increments the bacterium's times-fooled fitness score
+      ;; bacteria that consistently fool immune cells pass this genome to next generation
+      ask target [ set times-fooled times-fooled + 1 ]
     ]
   ]
-  if eat-count >= max-eat [die]
-  
+
+  ;; die of exhaustion once eat-count reaches max-eat
+  if eat-count >= max-eat [ die ]
 end
-
-
-
-
-
-
-
-
-
-
-

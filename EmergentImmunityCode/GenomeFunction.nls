@@ -1,11 +1,18 @@
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
 ;; create general function for creating unique genomes 
 ;;     have one for bacteria 
 ;;     have one for the immune cells (since their genome has meaning)
+=======
+;; genome functions are shared utilities used by bacteria, macrophages, and neutrophils
+;; all genomes are 16-character strings over the alphabet {A, G, T, C}
+;; character counts encode phenotypic traits (see each breed file for details)
+>>>>>>> Stashed changes
 
-;; initally all cells will have a random distribution of AGTCs 
-to-report randomGenomeFunction 
+;; ---- generates a random 16-character genome string ----
+;; used at setup for all agent types before evolution begins
+to-report randomGenomeFunction
   ;; How to use: let cellGenome randomGenomeFunction
   ;; goal: Generate a random 16-character sequence of 'AGTC'
   let seq ""
@@ -15,50 +22,123 @@ to-report randomGenomeFunction
   report seq
 end
 
-;; then, afterwards the immune cells will take the top percent of cells as parents and combine them together 
+;; ---- creates an offspring genome by crossing over two parent genomes ----
+;; used by immune cell evolution (macrophages and neutrophils use sexual recombination)
 to-report recombinationFunction [p1 p2]
-  ;; How to use: make a list of size n that holds the top n immune cels (make different lists for macrophages and neutrophils)
-  ;;             Loop through the list and call this function (maybe only use the top 4-6 cells and create ~50 new cells from this)
-  ;;             Probably a good idea to also run the mutation function once as well on each result from this (to introduce some randomness and prevent a finding a local extremum instead of global)
-  ;; goal: Take the two parent genomes, split p1 to be [k:recombPercent] and p2 to be [recombPercent:], the combine both strings together to get the new list
-  
-  ;; making the cutoff random
+  ;; How to use: call with two parent genome strings
+  ;; a random crossover point k is chosen
+  ;; offspring = first k chars of p1 + remaining chars of p2
+  ;; this mixes traits from both fit parents to hopefully produce a better offspring
+  ;; Probably a good idea to also run mutationFunction after this to add randomness
+  ;; and prevent getting stuck at a local optimum instead of finding global optimum
+
+  ;; making the cutoff point random
   let cutoff random (length p1)
 
-  ;; split the list, combine them, and make it a string again
+  ;; split both parents at cutoff, combine, and return result
   report word
-        (substring p1 0 cutoff)
-        (substring p2 cutoff length p2)
+    (substring p1 0 cutoff)
+    (substring p2 cutoff length p2)
 end
 
-
-;; the bacteria will just mutate the best ones a certain percent
+;; ---- mutates a genome string at a given per-character rate ----
+;; used by immune cells during evolution (random undirected mutation)
+;; bacteria use directedMutationFunction instead for guided evolution toward body-genome
 to-report mutationFunction [cellGenome mutationRate]
-  ;; How to use: make a list of size n that holds the top n bacteria. 
-  ;;             Loop through the list and call this function (maybe only use the top 3 cells and create ~50 new cells from this)
-  ;;             Maybe set the mutationRate to be 0.05
-  ;; goal: take the original genome and walk through the list and mutate the base at a probability of 0.05 (this is variable)
+  ;; How to use: pass genome string and rate e.g. 0.05 for 5% chance per character
+  ;; each character independently has mutationRate chance of being replaced
+  ;; replacement is always a DIFFERENT base than the current one
   let newGenome ""
   let genomeLength length cellGenome
-  
-  ;; loop through each character
+
+  ;; loop through each character in the genome
   foreach n-values genomeLength [ i -> i ] [
     i ->
-    let base substring cellGenome i (i + 1) ;; get one character (between i and i+1). Substring allows us to do that because cellGenome is a string
+    let base substring cellGenome i (i + 1) ;; get one character at position i
     ifelse random-float 1 < mutationRate [
-      ;; mutate base
+      ;; mutate: replace with a randomly chosen different base
       set newGenome word newGenome one-of remove base bases
-    ][
-      ;; keep original
+    ] [
+      ;; keep original base unchanged
       set newGenome word newGenome base
     ]
   ]
   report newGenome
 end
 
+<<<<<<< Updated upstream
 ;--------counts the minimum number of edits needed to turn one genome s1 to another genome s2-----------
 ;a bacteria with a low distance to the actual body dna will look like a healthy cell and ay fool immune cells into 
 ;not attacking it 
+=======
+;; ---- directed mutation function specifically for bacteria evolution ----
+;; unlike random mutationFunction, this steers mutations toward the body-genome
+;; this models real molecular mimicry where pathogens evolve to look like host cells
+;;
+;; each base has two chances to change:
+;; 1. mutationRate chance of DIRECTED mutation — copies the body-genome base at
+;;    that position, directly nudging the bacterium toward mimicry
+;; 2. mutationRate/2 chance of RANDOM mutation — keeps diversity in the population
+;;    so not all bacteria collapse to the same genome immediately
+;;
+;; without this, mutation is a random walk with no gradient and the graph never moves
+;; with this, bacteria visibly climb toward the body-genome each generation
+to-report directedMutationFunction [cellGenome targetGenome mutationRate]
+  let newGenome ""
+  let genomeLength length cellGenome
+
+  foreach n-values genomeLength [ i -> i ] [
+    i ->
+    let currentBase substring cellGenome i (i + 1)
+    let targetBase  substring targetGenome i (i + 1)
+
+    ifelse random-float 1 < mutationRate [
+      ;; directed mutation — copy the body-genome base at this position
+      ;; this is the engine that pushes bacteria toward mimicry each generation
+      set newGenome word newGenome targetBase
+    ] [
+      ifelse random-float 1 < (mutationRate / 2) [
+        ;; random mutation — maintains diversity so natural selection has
+        ;; variation to work with and bacteria dont all become identical
+        set newGenome word newGenome one-of remove currentBase bases
+      ] [
+        ;; keep original base unchanged
+        set newGenome word newGenome currentBase
+      ]
+    ]
+  ]
+  report newGenome
+end
+
+;; ---- counts positional mismatches between two genome strings ----
+;; used as a fast approximate similarity measure when strings are the same length
+;; for strings of different lengths, also penalises the length difference
+to-report genome-mismatch-count [g1 g2]
+  if not is-string? g1 [ report 0 ]
+  if not is-string? g2 [ report 0 ]
+  if length g1 = 0 [ report 0 ]
+  if length g2 = 0 [ report 0 ]
+
+  let compare-length min (list (length g1) (length g2))
+  let mismatch-count 0
+  let i 0
+
+  while [i < compare-length] [
+    if substring g1 i (i + 1) != substring g2 i (i + 1) [
+      set mismatch-count mismatch-count + 1
+    ]
+    set i (i + 1)
+  ]
+
+  ;; add penalty for any length difference between the two strings
+  report mismatch-count + abs ((length g1) - (length g2))
+end
+
+;; ---- computes the true Levenshtein edit distance between two strings ----
+;; counts minimum insertions, deletions, substitutions to turn s1 into s2
+;; used by genome-similarity when strings have different lengths
+;; implemented as a flattened 1D dynamic programming table
+>>>>>>> Stashed changes
 to-report levenshtein-distance [s1 s2]
   
   if not is-string? s1 [report 0]
@@ -72,30 +152,52 @@ to-report levenshtein-distance [s1 s2]
   ;convert both strings into lists of single characters 
   let list1 n-values len1 [i -> substring s1 i (i + 1)]
   let list2 n-values len2 [i -> substring s2 i (i + 1)]
+<<<<<<< Updated upstream
   
   ;matrice: access element at row i, col j with: i * (len2 + 1) + j
   let dp n-values ((len1 + 1) * (len2 + 1)) [0]
   
   ;first column: turning i characters into nothing costs i deletions 
+=======
+
+  ;; initialise dp table as flat list of size (len1+1) * (len2+1)
+  let dp n-values ((len1 + 1) * (len2 + 1)) [0]
+
+  ;; fill first column — cost of deleting all characters from s1
+>>>>>>> Stashed changes
   let i 0
   repeat len1 + 1 [
     set dp replace-item (i * (len2 + 1)) dp i
     set i (i + 1)
   ]
+<<<<<<< Updated upstream
   
   ;first row: building j characters from nothing costs j insertions 
+=======
+
+  ;; fill first row — cost of inserting all characters of s2
+>>>>>>> Stashed changes
   let j 0
   repeat len2 + 1 [
     set dp replace-item j dp j
     set j (j + 1)
   ]
+<<<<<<< Updated upstream
   
   ;fill the rest of the matrice row by row
+=======
+
+  ;; fill the rest of the table using recurrence relation
+>>>>>>> Stashed changes
   set i 1
   repeat len1 [
     set j 1
     repeat len2 [
+<<<<<<< Updated upstream
       ;cost 0 if characters match, cost 1 if they differ
+=======
+      ;; cost is 0 if characters match, 1 if they need substituting
+>>>>>>> Stashed changes
       let cost ifelse-value (item (i - 1) list1 = item (j - 1) list2) [0] [1]
 
       let delete-op  item ((i - 1) * (len2 + 1) + j) dp + 1
@@ -108,19 +210,33 @@ to-report levenshtein-distance [s1 s2]
     ]
     set i (i + 1)
   ]
+<<<<<<< Updated upstream
   
   report item (len1 * (len2 + 1) + len2) dp 
+=======
+
+  ;; bottom-right cell contains the final edit distance
+  report item (len1 * (len2 + 1) + len2) dp
+>>>>>>> Stashed changes
 end
 
-
-;---------converts levenshtein distance into a 0-1 similarity score---------
-;1.0 = identical; 0.0 = completely different 
-;used by immune cells to decide whether a bacteria looks like a healthy cell 
+;; ---- converts edit distance into a 0-1 similarity score ----
+;; 1.0 = identical genomes
+;; 0.0 = completely different genomes
+;;
+;; this is the core of the immune recognition system:
+;; immune cells compare a bacterium's genome to body-genome using this score
+;; if similarity >= (lvenchisten-function / 100) the immune cell leaves it alone
+;; if similarity <  (lvenchisten-function / 100) the immune cell attacks it
+;;
+;; high lvenchisten-function = immune cells only attack very foreign bacteria
+;; low  lvenchisten-function = immune cells attack almost everything
 to-report genome-similarity [g1 g2]
   if not is-string? g1 [ report 0 ]
   if not is-string? g2 [ report 0 ]
   if length g1 = 0 [ report 0 ]
   if length g2 = 0 [ report 0 ]
+<<<<<<< Updated upstream
   let dist levenshtein-distance g1 g2
   report 1 - (dist / max (list (length g1) (length g2)))
 end
@@ -152,4 +268,16 @@ end
 
 
 
+>>>>>>> Stashed changes
+=======
+
+  ;; fast path: same length strings use mismatch count (cheaper than full Levenshtein)
+  if length g1 = length g2 [
+    report 1 - (genome-mismatch-count g1 g2 / length g1)
+  ]
+
+  ;; different lengths: use full Levenshtein distance normalised by the longer string
+  let dist levenshtein-distance g1 g2
+  report 1 - (dist / max (list (length g1) (length g2)))
+end
 >>>>>>> Stashed changes

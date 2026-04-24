@@ -1,24 +1,40 @@
-;bacteria spread across the grid eating healthy cells
-;they evolve over generations, slowly trying to copy the dna of healthy tissue cells
+;; bacteria spread across the grid eating healthy cells
+;; they evolve over generations, slowly trying to copy the dna of healthy tissue cells
+;; the closer a bacterium's genome is to the body-genome the harder it is for
+;; immune cells to detect and attack it — this is molecular mimicry
 
-;visual cues for bacteria:
-;RED = genome very different frm doby dna (easy to detect)
-;ORANGE = genome getting similar 
-;YELLOW = genome very close to body dna 
-
+;; visual cues for bacteria colour:
+;; RED    = genome very different from body dna (similarity < 0.30) — easy to detect
+;; ORANGE = partial mimicry developing (0.30 to 0.60)
+;; YELLOW = strong mimicry (0.60 to 0.85) — hard for immune cells to detect
+;; WHITE  = near-perfect genome copy (> 0.85) — almost invisible to immune system
 
 breed [bacteria bacterium]
 
 bacteria-own [
+<<<<<<< Updated upstream
   genome  ;evolves toward body dna over generations
   ticks-survived  ;how many ticks survived (fitness score)
   times-fooled  ;how many times an immune cell chose not to attack (fitness score)
+=======
+  genome             ;; the 16-char dna string — evolves toward body-genome each generation
+  ticks-survived     ;; how many ticks this bacterium has survived (fitness score)
+  times-fooled       ;; how many times an immune cell chose not to attack it (fitness score)
+  similarity-to-body ;; cached 0-1 score of how close genome is to body-genome
+                     ;; 1.0 = identical to body-genome = perfect mimicry
+                     ;; updated every tick in bacteria-update-colour
+>>>>>>> Stashed changes
 ]
 
-;-------runs when setup button is clicked------
+;; ---- runs when setup button is clicked ----
 to setup-bacteria
   create-bacteria initial-bacteria-count [  
     set genome randomGenomeFunction
+<<<<<<< Updated upstream
+=======
+    ;; calculate initial similarity to body-genome
+    set similarity-to-body genome-similarity genome body-genome
+>>>>>>> Stashed changes
     set ticks-survived 0
     set times-fooled 0
     set shape "circle"
@@ -28,6 +44,7 @@ to setup-bacteria
   ]
 end
 
+<<<<<<< Updated upstream
 ;-------runs every tick-------
 to update-bacteria 
   ;save the longest surviving bacteria genome every tick
@@ -36,30 +53,37 @@ to update-bacteria
   ]
   
   
+=======
+;; ---- runs every tick ----
+to update-bacteria
+>>>>>>> Stashed changes
   ask bacteria [
     set ticks-survived ticks-survived + 1
-    bacteria-spread
-    bacteria-eat
-    bacteria-update-colour
+    bacteria-spread        ;; try to copy onto a neighbouring patch
+    bacteria-eat           ;; eat the current patch if it is a healthy cell
+    bacteria-update-colour ;; recalculate similarity and update colour
   ]
 end
 
-;--------tries to copy this bacteria onto a neighbouring empty patch-------
+;; ---- tries to copy this bacterium onto a neighbouring empty patch ----
 to bacteria-spread
+<<<<<<< Updated upstream
+=======
+  if count bacteria >= max-bacteria [ stop ]
+
+>>>>>>> Stashed changes
   if random-float 100 < bacteria-spread-chance% [
 
-    ; while we are still in the bacterium context
-    ; once we do "ask empty-neighbour", context switches to the patch
-    ; and we lose access to all turtle variables including genome
+    ;; save genome variables before switching context
+    ;; once we ask a patch we lose access to turtle variables
     let parent-genome genome
 
     let empty-neighbour one-of neighbors with [not any? bacteria-on self]
     if empty-neighbour != nobody [
       ask empty-neighbour [
-        ; we are now in PATCH context here
-        ; do NOT use "myself" or any turtle variables directly
-        ; use the local variables we saved above instead
+        ;; we are now in PATCH context — use saved local variables only
         sprout-bacteria 1 [
+<<<<<<< Updated upstream
           ; we are now in the new BACTERIUM context
           ; set genome first before anything else
           set genome         parent-genome
@@ -68,19 +92,30 @@ to bacteria-spread
           set shape          "circle"
           set color          red
           set size           1
+=======
+          ;; now in new BACTERIUM context — set genome first
+          set genome parent-genome
+          set similarity-to-body parent-similarity
+          set ticks-survived 0
+          set times-fooled   0
+          set shape "circle"
+          set color red
+          set size 1
+>>>>>>> Stashed changes
         ]
       ]
     ]
   ]
 end
 
-;--------marks the current patch as eaten if it is a healthy cell--------
+;; ---- marks the current patch as eaten if it is a healthy cell ----
 to bacteria-eat
   if [healthy?] of patch-here [
     ask patch-here [ set eaten? true ]
   ]
 end
 
+<<<<<<< Updated upstream
 
 ;---------shifts colour from red to yellow or orange as copy score increases--------
 to bacteria-update-colour
@@ -99,4 +134,54 @@ end
 
 
 
+=======
+;; ---- recalculates similarity every tick and updates colour to reflect mimicry progress ----
+;; FIX 1: original code calculated similarity into a local variable called 'copy'
+;;         but never wrote it back to similarity-to-body
+;;         so immune cells were always reading the stale value from spawn time
+;; FIX 2: original thresholds were integers (15, 25, 45) applied to a 0-1 score
+;;         corrected to fractional thresholds matching the actual similarity range
+to bacteria-update-colour
+  ;; recalculate and save similarity-to-body every tick
+  ;; CRITICAL: immune cells read this value to decide whether to attack or ignore
+  set similarity-to-body genome-similarity genome body-genome
+
+  ifelse similarity-to-body < 0.30 [
+    set color red      ;; very foreign genome — easy for immune cells to spot
+  ] [
+    ifelse similarity-to-body < 0.60 [
+      set color orange   ;; partial mimicry developing
+    ] [
+      ifelse similarity-to-body < 0.85 [
+        set color yellow   ;; strong mimicry — hard for immune cells to detect
+      ] [
+        set color pink    ;; near-perfect copy — almost invisible to immunity
+      ]
+    ]
+  ]
+end
+
+;; ---- reporters ----
+
+;; report the highest similarity score among all live bacteria
+;; tracks how far along mimicry evolution has progressed in the best individual
+to-report best-bacteria
+  ifelse any? bacteria [
+    report max [similarity-to-body] of bacteria
+  ] [
+    report 0
+  ]
+end
+
+;; reports how close the best bacterium is to breaching the immune detection threshold
+;; 0.0 = best bacterium looks nothing like body-genome
+;; 1.0 = best bacterium has reached or passed the threshold — immune cells leave it alone
+;; this is what the RED line on the Genome Fitness graph should report
+;; when this line hits 1.0 it means bacteria are successfully fooling immune cells
+to-report best-bacteria-vs-threshold
+  let threshold (lvenchisten-function / 100)
+  if threshold = 0 [ report 0 ]
+  report min (list 1.0 (best-bacteria / threshold))
+end
+>>>>>>> Stashed changes
 
